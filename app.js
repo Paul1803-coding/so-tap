@@ -489,18 +489,21 @@
   function draftFor(key, w) {
     var d = S.prog.drafts[key];
     if (!d) d = S.prog.drafts[key] = { sets: {}, warm: {}, removed: {} };
-    d.sets = d.sets || {}; d.warm = d.warm || {}; d.removed = d.removed || {};
+    d.sets = d.sets || {}; d.warm = d.warm || {}; d.removed = d.removed || {}; d.exOf = d.exOf || {};
     var plan = planSession(key, w, d);
     plan.items.forEach(function (it) {
       var act = actualEx(it.slot), arr = d.sets[it.slot.id], last = lastFor(act.id), rg = range(it.reps);
-      if (!arr || arr.ex !== act.id) { arr = []; arr.ex = act.id; }
+      // Bài đã đổi giữa chừng thì làm lại các hiệp; chưa có ghi nhận bài nào thì coi như bài hiện tại
+      if (!d.exOf[it.slot.id]) d.exOf[it.slot.id] = act.id;
+      if (!arr || d.exOf[it.slot.id] !== act.id) { arr = []; d.exOf[it.slot.id] = act.id; }
       var out = [];
       for (var j = 0; j < it.sets; j++) {
         if (arr[j]) { out.push(arr[j]); continue; }
         var ls = last && last.sets && (last.sets[j] || last.sets[last.sets.length - 1]);
         out.push({ kg: ls ? ls.kg : last ? last.kg : (act.bw ? 0 : ""), reps: ls ? ls.reps : rg.lo, done: false });
       }
-      out.ex = act.id;
+      // Giữ lại hiệp đã xong nếu số hiệp giảm (ví dụ vừa bật chế độ mệt)
+      for (var x = it.sets; x < arr.length; x++) if (arr[x] && arr[x].done) out.push(arr[x]);
       d.sets[it.slot.id] = out;
     });
     return { d: d, plan: plan };
@@ -601,6 +604,12 @@
     h += '<div style="text-align:right"><div class="big num" style="color:' + (left < 0 ? "var(--accent-ink)" : "var(--fg)") + '">' + (left < 0 ? "+" + int(-left) : int(left)) + '</div><div class="note">' + (left < 0 ? "kcal vượt mục tiêu" : "kcal còn lại") + "</div></div></div>";
     h += '<div class="meter' + (left < 0 ? " over" : "") + '"><i style="width:' + Math.min(100, s.kcal / t.kcal * 100) + '%"></i></div>';
     h += '<div class="grid3">' + macro("Đạm", "--accent", s.p, t.p) + macro("Tinh bột", "--blue", s.c, t.c) + macro("Chất béo", "--fat", s.f, t.f) + "</div>";
+    // Thiếu đạm: tính cả các bữa còn lại trong kế hoạch, chỉ nhắc khi vẫn hụt
+    if (d.meals.length) {
+      var restP = PLAN_MEALS.filter(function (m) { return !hasPlanMeal(k, m.id); }).reduce(function (a, m) { return a + planMeal(m.id, k).p; }, 0);
+      var gap = Math.round(t.p - s.p - restP);
+      if (gap >= 12) h += '<p class="adj">Theo kế hoạch còn lại, hôm nay vẫn thiếu khoảng ' + gap + "g đạm. Thêm " + (gap >= 28 ? "100g ức gà hoặc thịt nạc (≈30g)" : gap >= 18 ? "3 lòng trắng + 1 trứng + 1 hộp sữa chua (≈20g)" : "2 trứng luộc (≈13g)") + ".</p>";
+    }
     if (withButton) h += '<button class="btn ghost sm" data-goto="food" style="align-self:flex-start">+ Thêm món ngoài kế hoạch</button>';
     return h + "</div>";
   }
@@ -614,6 +623,10 @@
       h += '<div class="row"><input type="date" id="startDate" value="' + todayKey() + '" style="flex:1"><button class="btn sm" data-act="save-start">Lưu</button></div></div>';
     }
     if (UI.banner) h += '<div class="phase good">' + esc(UI.banner) + "</div>";
+    h += staleBanner();
+    // Thứ Hai và thứ Ba: hiện tổng kết tuần trước cho tới khi bấm đã xem
+    var dow = new Date().getDay(), wkA = keyOf(addDays(weekStart(new Date()), -7));
+    if (isToday && (dow === 1 || dow === 2) && S.settings.checkinSeen !== wkA && hasData()) h += checkinCard(true);
     h += dateBar();
     h += energyCard(k, true);
 
@@ -669,7 +682,7 @@
   function vTrain() {
     var w = currentWeek(), ph = phaseInfo(w), nk = nextKey(), count = sessionsThisWeek();
     if (!UI.sel) UI.sel = nk;
-    var key = UI.sel, P = PROGRAM[key], r0 = draftFor(key, w), d = r0.d, plan = r0.plan, h = "";
+    var key = UI.sel, P = PROGRAM[key], r0 = draftFor(key, w), d = r0.d, plan = r0.plan, h = staleBanner();
     h += '<div class="phase ' + ph.cls + '"><b>Tuần ' + w + " · " + ph.t + ":</b> " + ph.d + "</div>";
     if (count >= G().weekly) h += '<div class="phase warn"><b>Đủ ' + G().weekly + ' buổi tạ tuần này.</b> Ngày còn lại đi bộ dốc hoặc đạp xe nhẹ 40–45 phút, hoặc nghỉ hẳn.</div>';
     h += '<div class="pick">';
@@ -695,15 +708,16 @@
     var done = 0, total = 0;
     items.forEach(function (it) { (d.sets[it.slot.id] || []).forEach(function (s) { total++; if (s.done) done++; }); });
     var elapsed = d.startedAt ? Math.round((Date.now() - d.startedAt) / 60000) : 0;
-    h += '<div class="progress"><div class="bar"><i style="width:' + (total ? Math.round(done / total * 100) : 0) + '%"></i></div><span class="num">' + done + "/" + total + " hiệp" + (d.startedAt ? " · " + elapsed + "′" : "") + "</span></div>";
+    h += '<div class="progress"><div class="bar"><i style="width:' + (total ? Math.round(done / total * 100) : 0) + '%"></i></div><span class="num">' + done + "/" + total + " hiệp" + (d.startedAt ? ' · <span id="elapsed" data-start="' + d.startedAt + '">' + elapsed + "′</span>" : "") + "</span></div>";
 
     var wl = WARM[key], wd = wl.filter(function (x) { return d.warm[x.id]; }).length, wDone = wd === wl.length;
     h += '<div class="card"><div class="row between"><h2>Khởi động · khoảng 5 phút</h2><span class="note num">' + wd + "/" + wl.length + "</span></div>";
     if (wDone && !UI.warmShow) h += '<button class="btn ghost sm" data-act="warm-show">Đã khởi động xong · Xem lại</button>';
     else {
+      var ramp = rampText(key, d);
       wl.forEach(function (x) {
         var on = !!d.warm[x.id];
-        h += '<button class="check' + (on ? " on" : "") + '" aria-pressed="' + on + '" data-act="warm" data-v="' + x.id + '">' + CHECK_SVG + '<span><span class="t">' + esc(x.n) + '</span><br><span class="d">' + esc(x.d) + "</span></span></button>";
+        h += '<button class="check' + (on ? " on" : "") + '" aria-pressed="' + on + '" data-act="warm" data-v="' + x.id + '">' + CHECK_SVG + '<span><span class="t">' + esc(x.n) + '</span><br><span class="d">' + esc(x.d) + "</span>" + (x.id === "ramp" && ramp ? '<br><span class="d"><b>' + esc(ramp) + "</b></span>" : "") + "</span></button>";
       });
       h += '<p class="note">Bài compound thứ 2 trở đi: làm 1 hiệp 60% × 6 trước hiệp chính.</p>';
     }
@@ -743,6 +757,11 @@
     var slot = it.slot, act = actualEx(slot), sets = d.sets[slot.id] || [], allDone = sets.length && sets.every(function (s) { return s.done; }), h = "";
     var swapped = act.id !== slot.id;
     var pairName = it.pair ? actualEx(EXDB[it.pair]).n : "";
+    UI.open = UI.open || {};
+    if (allDone && !UI.open[slot.id]) {
+      return '<button class="ex done compact" data-act="exopen" data-v="' + slot.id + '"><span class="tickmini">✓</span><span class="t"><b>' + esc(act.n) + '</b><span class="s num">' + sets.map(function (s) { return (s.kg ? fmt(s.kg) + "×" : "") + s.reps; }).join(", ") + '</span></span><span class="note">Sửa</span></button>';
+    }
+    var nextIdx = -1; sets.some(function (s, j) { if (!s.done) { nextIdx = j; return true; } return false; });
     h += '<div class="ex' + (allDone ? " done" : "") + (it.pair ? " paired" : "") + '"><div class="ex-head"><div style="min-width:0"><div class="ex-name"><a href="https://www.youtube.com/results?search_query=' + encodeURIComponent(act.q) + '" target="_blank" rel="noopener">' + esc(act.n) + "</a></div>";
     h += '<div class="ex-rx"><b>' + it.sets + " × " + it.reps + "</b> · nghỉ " + (it.pair ? "sau khi xong cả cặp" : it.rest) + "</div>";
     if (swapped) h += '<p class="note">Thay cho ' + esc(slot.n) + "</p>";
@@ -754,14 +773,43 @@
     h += '<div class="srows">';
     sets.forEach(function (s, j) {
       var idp = key + "-" + slot.id + "-" + j;
-      h += '<div class="srow' + (s.done ? " on" : "") + '"><span class="sn">' + (j + 1) + "</span>";
+      h += '<div class="srow' + (s.done ? " on" : "") + (j === nextIdx ? " next" : "") + '"><span class="sn">' + (j + 1) + "</span>";
       h += '<label class="sk"><input id="kg-' + idp + '" inputmode="decimal" value="' + esc(s.kg === "" ? "" : fmt(s.kg)) + '" placeholder="kg" data-act="skg" data-ex="' + slot.id + '" data-i="' + j + '" aria-label="Kg hiệp ' + (j + 1) + '"><small>kg</small></label>';
       h += '<span class="step"><button data-act="rep" data-d="-1" data-ex="' + slot.id + '" data-i="' + j + '" aria-label="Bớt 1 rep">−</button><input id="rp-' + idp + '" inputmode="numeric" value="' + esc(s.reps) + '" data-act="srep" data-ex="' + slot.id + '" data-i="' + j + '" aria-label="Số rep hiệp ' + (j + 1) + '"><button data-act="rep" data-d="1" data-ex="' + slot.id + '" data-i="' + j + '" aria-label="Thêm 1 rep">+</button></span>';
       h += '<button class="tick' + (s.done ? " on" : "") + '" data-act="sdone" data-ex="' + slot.id + '" data-i="' + j + '" aria-pressed="' + s.done + '" aria-label="Xong hiệp ' + (j + 1) + '">✓</button></div>';
     });
     h += "</div>";
-    h += '<div class="row" style="gap:6px"><button class="btn ghost sm" data-act="swap" data-v="' + slot.id + '">Đổi bài</button>' + (!sets.some(function (s) { return s.done; }) ? '<button class="btn ghost sm" data-act="drop-ex" data-v="' + slot.id + '">Bỏ hôm nay</button>' : "") + "</div>";
+    if (BARBELL[act.id] && nextIdx >= 0) { var pl = plates(sets[nextIdx].kg); if (pl) h += '<p class="hint">Lắp mỗi bên (đòn 20kg): <b>' + pl + "</b></p>"; }
+    h += '<div class="row" style="gap:6px"><button class="btn ghost sm" data-act="swap" data-v="' + slot.id + '">Đổi bài</button>' + (lastFor(act.id) ? '<button class="btn ghost sm" data-act="hist" data-v="' + act.id + '">Lịch sử</button>' : "") + (!sets.some(function (s) { return s.done; }) ? '<button class="btn ghost sm" data-act="drop-ex" data-v="' + slot.id + '">Bỏ hôm nay</button>' : "") + (allDone ? '<button class="btn ghost sm" data-act="exopen" data-v="' + slot.id + '">Thu gọn</button>' : "") + "</div>";
     return h + "</div>";
+  }
+  // Bài dùng đòn tạ tự do 20kg (Smith có đòn đã cân bằng, khác nhau theo phòng tập nên không tính)
+  var BARBELL = { brow: 1, squat: 1, rdl: 1, dl: 1, bbbench: 1, bbbench2: 1, rackpull: 1 };
+  function plates(kg) {
+    kg = +kg; if (!(kg > 20)) return "";
+    var side = (kg - 20) / 2, out = [];
+    [25, 20, 15, 10, 5, 2.5, 1.25].forEach(function (p) { while (side >= p - 0.001) { out.push(fmt(p)); side -= p; } });
+    return out.join(" + ") + (side > 0.01 ? " (lệch " + fmt(side * 2) + "kg)" : "");
+  }
+  function rampText(key, d) {
+    var first = PROGRAM[key].ex[0], s = d.sets[first.id] && d.sets[first.id][0], kg = s ? +s.kg : 0;
+    if (!(kg > 20)) return "";
+    var r5 = function (x) { return Math.max(20, Math.round(x / 2.5) * 2.5); };
+    var steps = { UA: [[0.5, 8], [0.75, 4]], UB: [[0.5, 8], [0.75, 4]], LA: [[0, 10], [0.5, 6], [0.75, 3]], LB: [[0.4, 8], [0.6, 5], [0.8, 2]] }[key];
+    return "Với " + fmt(kg) + "kg: " + steps.map(function (x) { return (x[0] ? fmt(r5(kg * x[0])) + "kg" : "đòn trống") + " × " + x[1]; }).join(" → ");
+  }
+  function openHistory(exId) {
+    var ex = EXDB[exId], rows = [];
+    S.sessions.forEach(function (s) {
+      var log = s.log && s.log[exId];
+      if (log && log.length) rows.push({ date: s.date, txt: log.map(function (x) { return (x.kg ? fmt(x.kg) + "×" : "") + x.reps; }).join(", "), e: Math.max.apply(null, log.map(function (x) { return e1rm(x.kg, x.reps); })), pr: (s.prs || []).some(function (p) { return p.ex === exId; }) });
+      else if (s.weights && typeof s.weights[exId] === "number") rows.push({ date: s.date, txt: fmt(s.weights[exId]) + " kg", e: s.weights[exId], pr: false });
+    });
+    var h = sheetHead("Lịch sử: " + esc(ex.n));
+    var pts = rows.slice(0, 20).reverse().filter(function (r) { return r.e > 0; }).map(function (r) { return { k: r.date, v: r.e }; });
+    if (pts.length >= 2) h += '<div class="card"><h2>Sức mạnh ước tính (1 rep tối đa)</h2>' + lineChart(pts, true) + '<p class="note">Tính từ hiệp tốt nhất mỗi buổi. Đường đi lên là bạn đang mạnh hơn.</p></div>';
+    h += '<div class="card"><div>' + rows.slice(0, 12).map(function (r) { return '<div class="h-row"><div><p class="h-title">' + shortDate(r.date) + (r.pr ? " 🏆" : "") + '</p><p class="h-sub num">' + r.txt + '</p></div><span class="note num">' + (r.e ? "≈" + fmt(Math.round(r.e * 2) / 2) + "kg" : "") + "</span></div>"; }).join("") + "</div></div>";
+    openSheet(h);
   }
 
   // ---------- Ăn ----------
@@ -790,6 +838,12 @@
       var def = defaultSlot();
       return '<select id="' + id + '">' + SLOTS.map(function (s) { return "<option" + (s === def ? " selected" : "") + ">" + s + "</option>"; }).join("") + "</select>";
     };
+    UI.recent = recentFoods();
+    if (UI.recent.length) {
+      h += '<div class="card"><h2>Hay ăn gần đây</h2><div class="sit">' + UI.recent.map(function (r, i) {
+        return '<button class="sit-btn" data-act="recent" data-v="' + i + '">+ ' + esc(r.name) + ' <span class="muted num">' + int(r.kcal) + "</span></button>";
+      }).join("") + '</div><p class="note">Bấm một lần là thêm vào bữa ' + defaultSlot().toLowerCase() + ".</p></div>";
+    }
     h += '<div class="card"><h2>Thêm món</h2><input id="q" placeholder="Tìm: phở, cơm, ức gà, trứng…" value="' + esc(UI.q) + '" autocomplete="off" aria-label="Tìm món">';
     h += '<div class="results" id="results"></div><div class="grid2"><label class="field">Số phần<input id="qty" inputmode="decimal" value="1"></label><label class="field">Bữa' + slotSel("slotA") + "</label></div>";
     h += '<button class="btn dark" data-act="addfood">Thêm món đã chọn</button><p class="note">Số liệu là ước tính trung bình cho khẩu phần thường gặp.</p></div>';
@@ -804,6 +858,18 @@
     return '<div class="phgrid">' + list.map(function (p) {
       return '<button class="ph" data-act="viewphoto" data-v="' + esc(p.id) + '"><img data-ph="' + esc(p.id) + '" alt="Ảnh ' + esc(p.slot || p.kind) + '"><span>' + esc(p.label || p.slot || "") + "</span></button>";
     }).join("") + "</div>";
+  }
+  // Món ngoài kế hoạch đã ghi trong 30 ngày, xếp theo số lần ăn rồi độ gần đây
+  function recentFoods() {
+    var map = {}, t = todayKey(), from = shiftKey(t, -30);
+    Object.keys(S.days).filter(function (k) { return k >= from && k <= t; }).sort().forEach(function (k) {
+      (S.days[k].meals || []).forEach(function (m) {
+        if (m.q || !m.name) return;
+        var key = norm(m.name), r = map[key] || (map[key] = { name: m.name, n: 0, last: "" });
+        r.n++; r.last = k; r.kcal = m.kcal; r.p = m.p; r.c = m.c; r.f = m.f;
+      });
+    });
+    return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.n - a.n || (b.last > a.last ? 1 : -1); }).slice(0, 8);
   }
   function defaultSlot() { var hr = new Date().getHours(); return hr < 10 ? "Sáng" : hr < 15 ? "Trưa" : hr < 21 ? "Tối" : "Phụ"; }
   function renderResults() {
@@ -891,6 +957,8 @@
       h += '<div class="phase warn"><b>Nên sao lưu.</b> Dữ liệu chỉ nằm trên điện thoại này. ' + (lb ? "Lần sao lưu gần nhất: " + new Date(lb).toLocaleDateString("vi-VN") + "." : "Bạn chưa sao lưu lần nào.") + ' <button class="btn sm dark" data-act="backup" style="margin-top:8px">Sao lưu ngay</button></div>';
     }
 
+    h += checkinCard(false);
+
     // Mục tiêu
     var startW = wi.length ? wi[0].w : 80, curW = tr.a1 != null ? tr.a1 : (wi.length ? wi[wi.length - 1].w : null);
     h += '<div class="card"><h2>Mục tiêu</h2>';
@@ -960,6 +1028,35 @@
     return h;
   }
 
+  // Tổng kết tuần trước (thứ Hai đến Chủ nhật), kiểu check-in hằng tuần
+  function weekCheckin() {
+    var ws = weekStart(new Date()), a = keyOf(addDays(ws, -7)), b = keyOf(addDays(ws, -1)), pa = keyOf(addDays(ws, -14)), pb = keyOf(addDays(ws, -8));
+    var t = T(), g = G(), ses = sessionsInRange(a, b).length, days = [];
+    // Chỉ tính ngày ghi tương đối đủ (từ nửa mục tiêu trở lên), tránh ngày quên ghi kéo trung bình xuống
+    for (var i = 0; i < 7; i++) { var s = sum(peekDay(shiftKey(a, i)).meals); if (s.kcal >= t.kcal * 0.5) days.push(s); }
+    var kcal = avg(days.map(function (x) { return x.kcal; })), p = avg(days.map(function (x) { return x.p; }));
+    var wi = weighIns(), wA = wi.filter(function (x) { return x.k >= a && x.k <= b; }), wP = wi.filter(function (x) { return x.k >= pa && x.k <= pb; });
+    var avgA = avg(wA.map(function (x) { return x.w; })), avgP = avg(wP.map(function (x) { return x.w; })), dw = avgA != null && avgP != null ? avgA - avgP : null;
+    var wl = waistList(), waA = wl.filter(function (x) { return x.k >= a && x.k <= b; }).pop(), waP = wl.filter(function (x) { return x.k < a; }).pop(), dwa = waA && waP ? waA.v - waP.v : null;
+    var v = "", cls = "";
+    if (days.length < 4 && wA.length < 3) v = "Chưa đủ dữ liệu để kết luận. Mỗi tuần cần ghi ăn đủ ít nhất 4 ngày và cân 3 buổi sáng.";
+    else if (days.length >= 3 && p != null && p < t.p * 0.9) { v = "Đạm trung bình chỉ " + int(p) + "g, thiếu so với " + t.p + "g. Ưu tiên ăn đủ đạm trước, đây là thứ giữ cơ khi đang giảm mỡ."; cls = "warn"; }
+    else if (dw == null) v = "Đã có số liệu ăn uống. Cân thêm 3 buổi sáng tuần này để so được cân nặng.";
+    else if (dw <= -0.8) { v = "Giảm " + fmt(-dw) + " kg, nhanh hơn mục tiêu. Thêm khoảng 100–150 kcal mỗi ngày (nửa chén cơm) để không mất cơ."; cls = "warn"; }
+    else if (dw <= -0.25) { v = "Giảm " + fmt(-dw) + " kg, đúng nhịp. Giữ nguyên mọi thứ."; cls = "good"; }
+    else if (dwa != null && dwa < 0) { v = "Cân gần như đứng nhưng vòng bụng nhỏ đi " + fmt(-dwa) + " cm: recomp đang chạy. Giữ nguyên."; cls = "good"; }
+    else if (kcal != null && kcal > t.kcal * 1.05) { v = "Ăn trung bình " + int(kcal) + " kcal, cao hơn mục tiêu " + int(t.kcal) + ". Bám đúng mục tiêu một tuần trước khi cắt thêm."; cls = "warn"; }
+    else { v = "Cân và vòng bụng chưa giảm. Nếu hết tuần này vẫn vậy: bớt 50g cơm bữa tối và đi thêm 2.000 bước mỗi ngày."; cls = "warn"; }
+    if (ses < g.weekly - 1) v += " Tập " + ses + "/" + g.weekly + " buổi, cố giữ ít nhất " + (g.weekly - 1) + " buổi.";
+    return { a: a, b: b, ses: ses, kcal: kcal, p: p, nDays: days.length, nW: wA.length, dw: dw, dwa: dwa, v: v, cls: cls, wk: a };
+  }
+  function checkinCard(dismiss) {
+    var c = weekCheckin(), g = G();
+    var h = '<div class="card checkin ' + c.cls + '"><div class="row between"><h2>Tổng kết tuần ' + parseKey(c.a).getDate() + "/" + (parseKey(c.a).getMonth() + 1) + "–" + parseKey(c.b).getDate() + "/" + (parseKey(c.b).getMonth() + 1) + "</h2>" + (dismiss ? '<button class="x" data-act="checkin-seen" data-v="' + c.wk + '" aria-label="Đã xem">✕</button>' : "") + "</div>";
+    h += '<div class="grid4"><div><span class="label">Buổi tập</span><b class="num">' + c.ses + "/" + g.weekly + '</b></div><div><span class="label">Kcal TB</span><b class="num">' + (c.kcal != null ? int(c.kcal) : "–") + '</b></div><div><span class="label">Đạm TB</span><b class="num">' + (c.p != null ? int(c.p) + "g" : "–") + '</b></div><div><span class="label">Cân nặng</span><b class="num">' + (c.dw != null ? (c.dw > 0 ? "+" : "") + fmt(c.dw) : "–") + "</b></div></div>";
+    return h + '<p>' + esc(c.v) + "</p></div>";
+  }
+
   function calendarCard() {
     var h = '<div class="card"><div class="row between"><h2>Lịch tổng quan</h2><div class="seg2"><button aria-pressed="' + (UI.calMode === "month") + '" data-act="calmode" data-v="month">Tháng</button><button aria-pressed="' + (UI.calMode === "year") + '" data-act="calmode" data-v="year">Năm</button></div></div>';
     var today = todayKey();
@@ -997,7 +1094,7 @@
     }
     return h + "</div>";
   }
-  function lineChart(pts) {
+  function lineChart(pts, plain) {
     if (pts.length < 2) return '<p class="note">Cần ít nhất 2 lần cân để vẽ biểu đồ.</p>';
     var W = 600, H = 200, L = 40, R = 14, Tp = 14, B = 26;
     var vs = pts.map(function (p) { return p.v; }), mn = Math.min.apply(null, vs), mx = Math.max.apply(null, vs);
@@ -1010,8 +1107,8 @@
     var area = line + " L" + X(pts[pts.length - 1]).toFixed(1) + " " + (H - B) + " L" + L + " " + (H - B) + " Z";
     var ticks = [mn, (mn + mx) / 2, mx], lp = pts[pts.length - 1], gw = G().weight;
     var g = ticks.map(function (t) { return '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(t).toFixed(1) + '" y2="' + Y(t).toFixed(1) + '" stroke="var(--line)"/><text x="' + (L - 6) + '" y="' + (Y(t) + 4).toFixed(1) + '" text-anchor="end" font-size="12" fill="var(--muted)">' + fmt(t) + "</text>"; }).join("");
-    if (gw >= mn && gw <= mx) g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(gw).toFixed(1) + '" y2="' + Y(gw).toFixed(1) + '" stroke="var(--good)" stroke-dasharray="5 4"/>';
-    return '<div class="chart"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Biểu đồ cân nặng">' + g +
+    if (!plain && gw >= mn && gw <= mx) g +='<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(gw).toFixed(1) + '" y2="' + Y(gw).toFixed(1) + '" stroke="var(--good)" stroke-dasharray="5 4"/>';
+    return '<div class="chart"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + (plain ? "Biểu đồ sức mạnh" : "Biểu đồ cân nặng") + '">' + g +
       '<path d="' + area + '" fill="var(--accent)" fill-opacity="0.12"/><path d="' + line + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>' +
       '<circle cx="' + X(lp).toFixed(1) + '" cy="' + Y(lp.v).toFixed(1) + '" r="5" fill="var(--accent)"/>' +
       '<text x="' + L + '" y="' + (H - 6) + '" font-size="12" fill="var(--muted)">' + shortDate(pts[0].k) + '</text><text x="' + (W - R) + '" y="' + (H - 6) + '" font-size="12" text-anchor="end" fill="var(--muted)">' + shortDate(lp.k) + "</text></svg></div>";
@@ -1136,7 +1233,7 @@
     h += '<div class="grid2"><button class="btn" data-act="backup">Sao lưu</button><button class="btn ghost" data-act="restore">Khôi phục</button></div></div>';
     h += '<div class="card"><h2>Cài app lên điện thoại</h2><ul class="plain"><li><b>iPhone:</b> mở bằng Safari → nút Chia sẻ → "Thêm vào MH chính".</li><li><b>Android:</b> mở bằng Chrome → menu ⋮ → "Cài đặt ứng dụng".</li></ul></div>';
     h += '<div class="card"><h2>Xoá toàn bộ</h2><p class="note">Xoá mọi buổi tập, món ăn, số đo và ảnh trên máy này.</p><button class="btn ghost" data-act="wipe">Xoá toàn bộ dữ liệu</button></div>';
-    h += '<p class="note" style="text-align:center">Sổ Tập Recomp · bản 2.0</p>';
+    h += '<p class="note" style="text-align:center">Sổ Tập Recomp · bản 2.1</p>';
     SH = { kind: "settings" };
     openSheet(h);
   }
@@ -1367,10 +1464,14 @@
       var r1 = draftFor(UI.sel, w), dr1 = r1.d, set = dr1.sets[exId][si];
       set.done = !set.done;
       if (set.done) {
-        if (set.kg === "" || set.kg == null) set.kg = 0;
+        var it = r1.plan.items.filter(function (x) { return x.slot.id === exId; })[0], act = actualEx(it.slot);
+        if (set.kg === "" || set.kg == null) {
+          if (act.bw) set.kg = 0;
+          else { set.done = false; toast("Nhập mức tạ (kg) cho hiệp này"); var ki = document.getElementById("kg-" + UI.sel + "-" + exId + "-" + si); if (ki) ki.focus(); return; }
+        }
         if (!(parseInt(set.reps, 10) > 0)) { set.done = false; toast("Nhập số rep cho hiệp này"); render(); return; }
         if (!dr1.startedAt) dr1.startedAt = Date.now();
-        var it = r1.plan.items.filter(function (x) { return x.slot.id === exId; })[0], act = actualEx(it.slot);
+        dr1.lastAt = Date.now();
         var partner = it.pair ? r1.plan.items.filter(function (x) { return x.slot.id === it.pair; })[0] : null;
         var partnerDone = partner ? (dr1.sets[partner.slot.id][si] || {}).done : true;
         if (partner && !partnerDone) toast("Sang ngay " + actualEx(partner.slot).n + " hiệp " + (si + 1));
@@ -1382,6 +1483,19 @@
       save(); render();
     }
     else if (a === "swap") openSwap(v);
+    else if (a === "hist") openHistory(v);
+    else if (a === "exopen") { UI.open = UI.open || {}; UI.open[v] = !UI.open[v]; render(); }
+    else if (a === "stale-save") { finish(v, b.getAttribute("data-d")); }
+    else if (a === "stale-drop") {
+      if (!b.getAttribute("data-armed")) { b.setAttribute("data-armed", "1"); b.textContent = "Bấm lần nữa để bỏ"; return; }
+      S.prog.drafts[v] = null; flush(); render(); toast("Đã bỏ buổi dở");
+    }
+    else if (a === "recent") {
+      var rc = UI.recent && UI.recent[+v]; if (!rc) return;
+      day(UI.date).meals.push({ id: uid(), slot: defaultSlot(), name: rc.name, kcal: rc.kcal, p: rc.p, c: rc.c, f: rc.f });
+      save(); render(); toast("Đã thêm " + rc.name);
+    }
+    else if (a === "checkin-seen") { S.settings.checkinSeen = v; flush(); render(); }
     else if (a === "drop-ex") { var dx = draftFor(UI.sel, w).d; dx.removed[v] = true; save(); render(); toast("Đã bỏ bài này cho hôm nay"); }
     else if (a === "restore-ex") { var dz = draftFor(UI.sel, w).d; delete dz.removed[v]; save(); render(); }
     else if (a === "finish") {
@@ -1429,7 +1543,11 @@
       if (a === "skg") { var n = num(t.value); s.kg = n == null ? "" : n; } else s.reps = parseInt(t.value, 10) || "";
       save();
     }
-    else if (a === "measure") { var d = day(UI.date), n2 = num(t.value); d[t.getAttribute("data-v")] = n2; save(); }
+    else if (a === "measure") {
+      var d = day(UI.date), n2 = num(t.value), field = t.getAttribute("data-v");
+      var ok = field === "w" ? n2 >= 30 && n2 <= 250 : n2 >= 40 && n2 <= 200;
+      d[field] = ok ? n2 : null; save();
+    }
   });
   view.addEventListener("change", function (e) {
     var t = e.target;
@@ -1448,8 +1566,18 @@
     save(); render();
   }
 
-  function finish() {
-    var w = currentWeek(), key = UI.sel, r = draftFor(key, w), d = r.d, dn = 0, tt = 0, log = {}, weights = {}, skipped = [];
+  function e1rm(kg, reps) { return kg * (1 + reps / 30); }
+  function bestBefore(exId) {
+    var b = { kg: 0, e: 0 };
+    S.sessions.forEach(function (s) {
+      var log = s.log && s.log[exId];
+      if (log) log.forEach(function (x) { b.kg = Math.max(b.kg, x.kg); b.e = Math.max(b.e, e1rm(x.kg, x.reps)); });
+      else if (s.weights && typeof s.weights[exId] === "number") b.kg = Math.max(b.kg, s.weights[exId]);
+    });
+    return b;
+  }
+  function finish(keyArg, dateArg) {
+    var key = keyArg || UI.sel, w = currentWeek(), r = draftFor(key, w), d = r.d, dn = 0, tt = 0, log = {}, weights = {}, skipped = [], prs = [], vol = 0;
     r.plan.items.forEach(function (it) {
       var act = actualEx(it.slot), sets = d.sets[it.slot.id] || [], done = sets.filter(function (s) { return s.done; });
       if (it.dropped) { skipped.push(it.slot.id); return; }
@@ -1457,17 +1585,53 @@
       if (!done.length) { skipped.push(it.slot.id); return; }
       log[act.id] = done.map(function (s) { return { kg: +s.kg || 0, reps: +s.reps || 0 }; });
       weights[act.id] = Math.max.apply(null, log[act.id].map(function (s) { return s.kg; }));
+      log[act.id].forEach(function (s) { vol += s.kg * s.reps; });
+      // Kỷ lục: so với mọi buổi trước của chính bài này
+      var prev = bestBefore(act.id), top = log[act.id].reduce(function (a, s) { return e1rm(s.kg, s.reps) > e1rm(a.kg, a.reps) ? s : a; });
+      if (top.kg > 0 && (prev.kg > 0 || prev.e > 0)) {
+        if (weights[act.id] > prev.kg) prs.push({ ex: act.id, kg: weights[act.id], reps: log[act.id].filter(function (s) { return s.kg === weights[act.id]; })[0].reps, t: "tạ" });
+        else if (prev.e > 0 && e1rm(top.kg, top.reps) > prev.e + 0.01) prs.push({ ex: act.id, kg: top.kg, reps: top.reps, t: "rep" });
+      }
     });
-    var now = Date.now(), mode = d.budget && r.plan.steps.length ? (d.tired ? "short-tired" : "short") : d.tired ? "tired" : "full";
-    S.sessions.unshift({ id: "s" + now, date: todayKey(), ts: now, key: key, week: w, done: dn, total: tt, log: log, weights: weights, skipped: skipped, mode: mode, minutes: d.startedAt ? Math.round((now - d.startedAt) / 60000) : null });
+    var now = Date.now(), date = dateArg || todayKey(), mode = d.budget && r.plan.steps.length ? (d.tired ? "short-tired" : "short") : d.tired ? "tired" : "full";
+    var minutes = d.startedAt ? Math.min(240, Math.round(((dateArg ? (d.lastAt || d.startedAt) : now) - d.startedAt) / 60000)) : null;
+    var ts = dateArg ? (d.lastAt || d.startedAt || now) : now;
+    S.sessions.push({ id: "s" + now, date: date, ts: ts, key: key, week: w, done: dn, total: tt, log: log, weights: weights, skipped: skipped, mode: mode, minutes: minutes, vol: Math.round(vol), prs: prs });
+    S.sessions.sort(function (a, b) { return b.ts - a.ts; });
     S.prog.drafts[key] = null;
     S.prog.nextIndex = (ORDER.indexOf(key) + 1) % 4;
-    UI.confirm = false; UI.sel = null;
+    UI.confirm = false; UI.sel = null; UI.open = {};
     stopTimer(); flush();
     UI.tab = "today"; UI.date = todayKey();
-    UI.banner = "Đã lưu " + PROGRAM[key].name + " (" + dn + "/" + tt + " hiệp" + (skipped.length ? ", bỏ " + skipped.length + " bài" : "") + "). Buổi tiếp theo: " + PROGRAM[ORDER[S.prog.nextIndex]].name + ". Nhớ tick bữa sau tập.";
+    var msg = "Đã lưu " + PROGRAM[key].name + (dateArg ? " vào " + shortDate(date) : "") + ": " + dn + "/" + tt + " hiệp" + (minutes ? " · " + minutes + " phút" : "") + " · tổng " + int(vol) + " kg đã nâng" + (skipped.length ? " · bỏ " + skipped.length + " bài" : "") + ".";
+    if (prs.length) msg += " 🏆 Kỷ lục mới: " + prs.map(function (p) { return EXDB[p.ex].n + " " + fmt(p.kg) + "kg × " + p.reps; }).join(", ") + ".";
+    msg += " Buổi tiếp theo: " + PROGRAM[ORDER[S.prog.nextIndex]].name + ".";
+    UI.banner = msg;
     render(); window.scrollTo(0, 0);
   }
+  function staleDraft() {
+    var t = todayKey(), out = null;
+    ORDER.forEach(function (k) {
+      var d = S.prog.drafts[k];
+      if (!d || !d.startedAt || out) return;
+      var dk = keyOf(new Date(d.startedAt));
+      if (dk >= t) return;
+      var n = 0; Object.keys(d.sets || {}).forEach(function (s) { (d.sets[s] || []).forEach(function (x) { if (x.done) n++; }); });
+      if (n) out = { key: k, date: dk, n: n };
+    });
+    return out;
+  }
+  function staleBanner() {
+    var st = staleDraft();
+    if (!st) return "";
+    return '<div class="phase warn"><b>Buổi ' + PROGRAM[st.key].name + " ngày " + shortDate(st.date) + " chưa bấm Hoàn thành</b> (" + st.n + ' hiệp đã ghi).<div class="row" style="margin-top:8px"><button class="btn sm dark" data-act="stale-save" data-v="' + st.key + '" data-d="' + st.date + '">Lưu vào ' + shortDate(st.date) + '</button><button class="btn sm ghost" data-act="stale-drop" data-v="' + st.key + '">Bỏ buổi dở</button></div></div>';
+  }
+
+  // Đồng hồ thời gian tập chạy trên màn Tập
+  setInterval(function () {
+    var el = document.getElementById("elapsed");
+    if (el) el.textContent = Math.round((Date.now() - +el.getAttribute("data-start")) / 60000) + "′";
+  }, 20000);
 
   // Sang ngày mới khi app vẫn mở
   var lastToday = todayKey();

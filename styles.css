@@ -323,5 +323,17 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space:
 .ymg i.sf { background: transparent; border: 1px solid var(--line); }
 button.day { border: 0; background: transparent; padding: 0; }
 
+/* Bản 2.1 */
+.srow.next { box-shadow: inset 0 0 0 2px var(--accent); }
+.ex.compact { flex-direction: row; align-items: center; gap: 10px; padding: 10px 14px; width: 100%; text-align: left; }
+.ex.compact .t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ex.compact .s { font-size: 12px; color: var(--muted); }
+.tickmini { width: 26px; height: 26px; flex: none; border-radius: 50%; background: var(--good); color: var(--surface); display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.grid4 > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.grid4 b { font-family: var(--font-display); font-size: 22px; line-height: 1; }
+.checkin.good { border-color: var(--good); }
+.checkin.warn { border-color: var(--accent); }
+
 @media (prefers-reduced-motion: reduce) { .meter i, .macro .bar i, .progress .bar i { transition: none; } }
 @media (max-width: 380px) { .grid3 { grid-template-columns: 1fr; } .pick { grid-template-columns: repeat(2, minmax(0,1fr)); } }
