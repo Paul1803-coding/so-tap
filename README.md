@@ -3,12 +3,13 @@
 App theo dõi tập gym và ăn uống cá nhân, dựng theo kế hoạch Recomp trong project "Xây dựng chế độ dinh dưỡng".
 
 - **Hôm nay:** calo và đạm, tinh bột, béo so với mục tiêu (2.150 kcal · 140g · 250g · 65g). Checklist các bữa theo ngày ăn mẫu: tick bữa nào là bữa đó tự ghi vào nhật ký ăn. Thêm 8.000 bước, ngủ 7 tiếng, cân nặng, vòng bụng.
-- **Tập:** giáo án Upper A → Lower A → Upper B → Lower B, có khởi động, đồng hồ nghỉ, FST-7 từ tuần 5, giảm tải mỗi 8 tuần, gợi ý tăng tạ theo lần trước.
-- **Ăn:** nhật ký ăn từng ngày, danh sách món Việt thường gặp, tự nhập số liệu.
+- **Hôm nay có gì khác kế hoạch?** Bận không tập, ăn lệch, lỡ giờ ăn, mệt/ngủ ít, thiếu thời gian. App gợi ý cách xử lý và tự chỉnh mục tiêu calo hôm nay và các ngày sau.
+- **Tập:** giáo án Upper A → Lower A → Upper B → Lower B. Ghi kg và rep từng hiệp, gợi ý tăng tạ theo tăng tiến kép, đồng hồ nghỉ, FST-7 từ tuần 5, giảm tải mỗi 8 tuần. Chọn số phút có được (75/60/45) để app rút gọn buổi tập: giữ compound, ghép superset, cắt bài cô lập. Có chế độ mệt và nút đổi bài sang máy khác.
+- **Ăn:** nhật ký ăn từng ngày, danh sách món Việt thường gặp, tự nhập số liệu, chụp ảnh bữa ăn làm checkpoint.
 - **Hộp tối:** lịch meal prep 14 ngày, công thức, khẩu phần. Tick hộp tối ở đây cũng ghi vào nhật ký ăn.
-- **Tiến độ:** cân nặng trung bình 7 ngày so với mục tiêu giảm 0,3–0,6 kg/tuần, vòng bụng, calo 7 ngày, lịch sử buổi tập. App tự nhắc khi đến lúc điều chỉnh (2 tuần liền cả cân và vòng bụng không giảm).
+- **Tiến độ:** mục tiêu dài hạn (cân nặng, vòng bụng), lịch tháng và lịch năm, cân nặng trung bình 7 ngày, ảnh checkpoint cơ thể, calo 7 ngày, lịch sử buổi tập. App tự nhắc khi đến lúc điều chỉnh (2 tuần liền cả cân và vòng bụng không giảm).
 
-Dữ liệu lưu trên điện thoại, không gửi đi đâu. Vào ⚙️ Cài đặt → **Sao lưu** để xuất file, **Khôi phục** để nạp lại khi đổi máy.
+Dữ liệu và ảnh lưu trên điện thoại, không gửi đi đâu. Vào ⚙️ Cài đặt → **Sao lưu** để xuất file, **Khôi phục** để nạp lại khi đổi máy.
 
 ## Cài lên điện thoại
 

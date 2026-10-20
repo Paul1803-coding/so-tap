@@ -251,5 +251,77 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space:
 }
 .sheet h2 { font-family: var(--font-display); font-size: 26px; text-transform: uppercase; }
 
+/* Điều chỉnh trong ngày */
+.adj { font-size: 12px; font-weight: 600; color: var(--accent-ink); background: var(--warn-soft); border-radius: 8px; padding: 6px 10px; }
+.sit { display: flex; flex-wrap: wrap; gap: 8px; }
+.sit-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 8px 12px; font-size: 13px; font-weight: 600; }
+.sit-btn.on { background: var(--warn-soft); border-color: var(--accent-ink); color: var(--accent-ink); }
+.seg4, .seg2 { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface-2); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg2 { grid-template-columns: repeat(2, auto); }
+.seg4 button, .seg2 button { border: 0; background: transparent; padding: 8px 10px; border-radius: 8px; font-weight: 600; font-size: 13px; color: var(--muted); }
+.seg4 button[aria-pressed="true"], .seg2 button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.toggle { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; cursor: pointer; }
+.toggle input { width: 22px; height: 22px; flex: none; margin-top: 1px; accent-color: var(--accent); }
+
+/* Ghi từng hiệp */
+.srows { display: flex; flex-direction: column; gap: 6px; }
+.srow { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 44px; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 10px; }
+.srow.on { background: var(--good-soft); }
+.sn { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--muted); text-align: center; }
+.sk { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.sk input { padding: 8px; text-align: right; }
+.sk small, .step small { font-size: 12px; color: var(--muted); }
+.step { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); overflow: hidden; }
+.step button { border: 0; background: transparent; width: 34px; height: 40px; font-size: 20px; font-weight: 600; }
+.step input { width: 40px; border: 0; border-radius: 0; text-align: center; padding: 8px 0; background: transparent; }
+.tick { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); font-size: 18px; font-weight: 700; color: var(--muted); }
+.tick.on { background: var(--good); border-color: var(--good); color: var(--surface); }
+.ex.paired { border-left: 4px solid var(--blue); }
+
+/* Ảnh */
+.phgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.phgrid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ph { border: 0; padding: 0; background: var(--surface-2); border-radius: 10px; overflow: hidden; position: relative; aspect-ratio: 3 / 4; max-width: 100%; }
+.ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ph span { position: absolute; left: 0; right: 0; bottom: 0; font-size: 11px; font-weight: 600; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,.6)); padding: 10px 6px 4px; text-align: left; }
+.phbig { width: 100%; border-radius: 12px; display: block; }
+
+/* Mục tiêu */
+.goal { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+
+/* Lịch */
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cw { font-size: 11px; font-weight: 600; color: var(--muted); text-align: center; padding-bottom: 2px; }
+.cd { position: relative; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; min-height: 52px; padding: 4px 2px 8px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.cd .dn { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cd .tg { font-size: 10px; font-weight: 700; color: var(--muted); line-height: 1.1; min-height: 11px; }
+.cd.tr { background: var(--fg); border-color: var(--fg); }
+.cd.tr .dn, .cd.tr .tg { color: var(--bg); }
+.cd.now { outline: 2px solid var(--accent); outline-offset: -1px; }
+.cd.fut { opacity: .4; }
+.cd .ft { position: absolute; left: 6px; right: 6px; bottom: 3px; height: 3px; border-radius: 2px; }
+.ft.ok { background: var(--good); }
+.ft.off { background: var(--accent); }
+.cd .pd { position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background: var(--blue); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.lg { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--surface-2); }
+.lg.tr { background: var(--fg); }
+.lg.ok { background: var(--good); height: 4px; }
+.lg.off { background: var(--accent); height: 4px; }
+.lg.pd { background: var(--blue); width: 6px; height: 6px; border-radius: 50%; }
+.yr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.ym { border: 0; background: transparent; padding: 0; display: flex; flex-direction: column; gap: 4px; text-align: left; min-width: 0; }
+.ymh { display: flex; justify-content: space-between; gap: 4px; font-size: 12px; }
+.ymh span { color: var(--muted); font-size: 11px; }
+.ymg { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.ymg i, .lg.s0, .lg.s1, .lg.s2, .lg.s3 { display: block; aspect-ratio: 1; border-radius: 2px; }
+.ymg i.s0, .lg.s0 { background: var(--surface-2); }
+.ymg i.s1, .lg.s1 { background: color-mix(in srgb, var(--good) 35%, var(--surface-2)); }
+.ymg i.s2, .lg.s2 { background: color-mix(in srgb, var(--good) 70%, var(--surface-2)); }
+.ymg i.s3, .lg.s3 { background: var(--good); }
+.ymg i.sf { background: transparent; border: 1px solid var(--line); }
+button.day { border: 0; background: transparent; padding: 0; }
+
 @media (prefers-reduced-motion: reduce) { .meter i, .macro .bar i, .progress .bar i { transition: none; } }
 @media (max-width: 380px) { .grid3 { grid-template-columns: 1fr; } .pick { grid-template-columns: repeat(2, minmax(0,1fr)); } }
