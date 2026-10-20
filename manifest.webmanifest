@@ -1,7 +1,7 @@
 {
-  "name": "Sổ Tập Recomp",
-  "short_name": "Sổ Tập",
-  "description": "Sổ tập gym và ăn uống cá nhân theo kế hoạch Recomp.",
+  "name": "FitCore",
+  "short_name": "FitCore",
+  "description": "FitCore: tập gym và ăn uống cá nhân hoá.",
   "lang": "vi",
   "start_url": "./",
   "scope": "./",

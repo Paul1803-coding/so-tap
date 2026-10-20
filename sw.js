@@ -1,6 +1,6 @@
 // Bộ nhớ đệm để app mở được khi không có mạng.
 // Đổi VERSION mỗi lần cập nhật app để điện thoại tải bản mới.
-var VERSION = "so-tap-v4";
+var VERSION = "fitcore-v5";
 var SHELL = [
   "./",
   "./index.html",

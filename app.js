@@ -110,7 +110,7 @@
     { id: "sang", slot: "Sáng", t: "Bữa sáng", d: "Bánh mì kẹp 2 trứng (hoặc nửa suất xôi + trứng/thịt)", kcal: 430, p: 21, c: 48, f: 17 },
     { id: "g7", slot: "Phụ", t: "1 gói G7", d: "Không thêm trà sữa, nước ngọt", kcal: 70, p: 0.5, c: 11, f: 2.5 },
     { id: "trua", slot: "Trưa", t: "Trưa căng tin", d: "Cơm 1 nắm tay · thịt 2 lòng bàn tay · nửa đĩa rau · tránh đồ chiên", kcal: 650, p: 40, c: 75, f: 20 },
-    { id: "toi", slot: "Tối", t: "Hộp tối", d: "", kcal: 650, p: 50, c: 63, f: 13 },
+    { id: "toi", slot: "Tối", t: "Bữa tối", d: "", kcal: 650, p: 50, c: 63, f: 13 },
     { id: "phu", slot: "Phụ", t: "Bữa sau tập", d: "3 trứng + 1 hộp sữa chua không đường + 1 quả chuối", kcal: 370, p: 24, c: 33, f: 17 }
   ];
   var OTHER_HABITS = [
@@ -119,7 +119,7 @@
   ];
   var HABIT_COUNT = PLAN_MEALS.length + OTHER_HABITS.length;
 
-  // ---------- Hộp tối ----------
+  // ---------- Bữa tối ----------
   var TYPES = {
     ga:     { meat: "Ức gà 218g", rice: "200g cơm ≈ ½ cốc gạo", riceG: 200, oil: "2 thìa cà phê dầu", p: 50, k: 660 },
     than:   { meat: "Thăn lợn 200g", rice: "200g cơm ≈ ½ cốc gạo", riceG: 200, oil: "2 thìa cà phê dầu", p: 43, k: 690 },
@@ -289,7 +289,7 @@
       swaps: {},         // bài gốc -> bài thay thế
       sessions: [],      // mới nhất trước
       days: {},          // ngày -> { meals, c, w, waist, events, adj, adjNote, photos }
-      checks: {}         // việc trong lịch hộp tối
+      checks: {}         // việc trong lịch bữa tối
     };
   }
   function load() {
@@ -524,13 +524,13 @@
       var t = TYPES[dd.box[0]], c = Math.round(t.riceG * 0.28 + 8), f = Math.max(0, Math.round((t.k - t.p * 4 - c * 4) / 9));
       return { name: RNAME[dd.box[1]], d: t.meat + " · " + t.rice + " · " + t.oil, kcal: t.k, p: t.p, c: c, f: f, riceG: t.riceG };
     }
-    return { name: "Hộp meal prep", d: "200g ức gà sống + 200g cơm + 300g rau + 10g dầu", kcal: 650, p: 50, c: 63, f: 13, riceG: 200 };
+    return { name: "Meal prep ức gà", d: "200g ức gà sống + 200g cơm + 300g rau + 10g dầu", kcal: 650, p: 50, c: 63, f: 13, riceG: 200 };
   }
   function planMeal(id, k) {
     var m = PLAN_MEALS.filter(function (x) { return x.id === id; })[0];
     if (id !== "toi") return m;
     var b = boxFor(k);
-    return { id: "toi", slot: "Tối", t: "Hộp tối: " + b.name, d: b.d, kcal: b.kcal, p: b.p, c: b.c, f: b.f };
+    return { id: "toi", slot: "Tối", t: "Bữa tối: " + b.name, d: b.d, kcal: b.kcal, p: b.p, c: b.c, f: b.f };
   }
   function hasPlanMeal(k, id) { return peekDay(k).meals.some(function (m) { return m.q === id; }); }
   function sum(meals) {
@@ -882,12 +882,12 @@
     }).join("") : '<p class="empty" style="padding:10px 12px">Không thấy món này. Dùng phần "Tự nhập số liệu" bên dưới.</p>';
   }
 
-  // ---------- Hộp tối ----------
+  // ---------- Bữa tối ----------
   function prepTasks(dd) {
     var out = [];
     if (dd.box) {
       var t = TYPES[dd.box[0]];
-      out.push({ key: dd.d + ":box", box: true, k: "eat", kl: "Hộp tối", t: RNAME[dd.box[1]], s: t.meat + " · " + t.rice + " · " + t.oil + " · ≈" + t.p + "g đạm, " + t.k + " kcal" });
+      out.push({ key: dd.d + ":box", box: true, k: "eat", kl: "Bữa tối", t: RNAME[dd.box[1]], s: t.meat + " · " + t.rice + " · " + t.oil + " · ≈" + t.p + "g đạm, " + t.k + " kcal" });
     }
     if (dd.veg) out.push({ key: dd.d + ":veg", k: "veg", kl: "Rau hôm nay", t: dd.veg, s: "Mua và luộc hoặc xào ngay khi ăn" });
     if (dd.thaw) out.push({ key: dd.d + ":thaw", k: "thaw", kl: "Tối nay rã đông", t: "Chuyển xuống ngăn mát", s: dd.thaw });
@@ -912,9 +912,9 @@
     var eaten = DAYS.filter(function (d) { return d.box && hasPlanMeal(d.d, "toi"); }).length;
     var nextPrep = DAYS.filter(function (d) { return d.prep && d.d >= today && !S.checks[d.d + ":nau"]; })[0];
     var nextBox = DAYS.filter(function (d) { return d.box && d.d >= today; })[0];
-    h += '<div class="strip"><div class="cell"><span class="label">Hộp đã ăn</span><span class="big num">' + eaten + '<span class="muted" style="font-size:18px"> /14</span></span></div>';
+    h += '<div class="strip"><div class="cell"><span class="label">Bữa tối đã ăn</span><span class="big num">' + eaten + '<span class="muted" style="font-size:18px"> /14</span></span></div>';
     h += '<div class="cell"><span class="label">Đợt nấu tới</span><span class="mid">' + (nextPrep ? "Đợt " + nextPrep.prep + " · " + shortDate(nextPrep.d) : "Đã nấu hết") + "</span></div>";
-    h += '<div class="cell"><span class="label">Hộp kế tiếp</span><span class="mid">' + (nextBox ? esc(RNAME[nextBox.box[1]]) : "Hết chu kỳ") + "</span></div></div>";
+    h += '<div class="cell"><span class="label">Bữa tối tới</span><span class="mid">' + (nextBox ? esc(RNAME[nextBox.box[1]]) : "Hết chu kỳ") + "</span></div></div>";
     if (DAY_BY_DATE[today]) h += prepCard(DAY_BY_DATE[today], true);
     else if (today < first) h += '<div class="card"><p class="empty">Lịch bắt đầu từ ' + longDate(first) + ".</p></div>";
     else if (today > last) h += '<div class="card"><p class="empty">Chu kỳ 2 tuần đã kết thúc ' + longDate(last) + '. Bữa tối vẫn tính theo hộp chuẩn (ức gà 200g, 650 kcal). Nhờ Claude lên lịch 2 tuần mới rồi cập nhật app.</p></div>';
@@ -1145,7 +1145,7 @@
       h += sheetHead("Bận, không tập được");
       h += '<div class="card"><h2>Buổi tập</h2><p>Không sao. Lịch xoay vòng nên <b>' + PROGRAM[nextKey()].name + "</b> chỉ dời sang lần tập tới, không mất bài nào.</p>";
       h += '<p class="note">Tuần này đã tập <b>' + done + "/" + W + "</b> buổi, còn <b>" + left + "</b> ngày. " + (can >= W - done ? "Vẫn đủ ngày để tập đủ tuần, mỗi ngày 1 buổi." : "Tuần này tập được tối đa thêm " + can + " buổi. Đừng dồn 2 buổi một ngày; tuần ít hơn 1 buổi không ảnh hưởng gì đáng kể.") + "</p></div>";
-      h += '<div class="card"><h2>Ăn uống hôm nay</h2><ul class="plain"><li>Giữ đủ <b>' + T().p + "g đạm</b>, ngày nghỉ cơ vẫn cần đạm để giữ cơ.</li><li>Hộp tối ăn <b>nửa phần cơm</b> (bớt khoảng " + Math.round(dinner.riceG * 0.5 * 1.3) + " kcal), giữ nguyên thịt và rau.</li><li>Bữa sau tập đổi thành bữa phụ tối: <b>3 trứng + sữa chua, bỏ chuối</b>.</li><li>Đi bộ 20–30 phút cho đủ 8.000 bước.</li></ul>";
+      h += '<div class="card"><h2>Ăn uống hôm nay</h2><ul class="plain"><li>Giữ đủ <b>' + T().p + "g đạm</b>, ngày nghỉ cơ vẫn cần đạm để giữ cơ.</li><li>Bữa tối ăn <b>nửa phần cơm</b> (bớt khoảng " + Math.round(dinner.riceG * 0.5 * 1.3) + " kcal), giữ nguyên thịt và rau.</li><li>Bữa sau tập đổi thành bữa phụ tối: <b>3 trứng + sữa chua, bỏ chuối</b>.</li><li>Đi bộ 20–30 phút cho đủ 8.000 bước.</li></ul>";
       h += '<p class="note">Mục tiêu hôm nay sẽ giảm khoảng ' + cut + " kcal, còn " + int(T().kcal - cut) + " kcal.</p></div>";
       h += '<button class="btn" data-act="apply-busy" data-v="' + cut + '">' + (hasEvent(k, "busy") ? "Đã áp dụng · Bấm để huỷ" : "Áp dụng cho " + friendly(k).toLowerCase()) + "</button>";
     } else if (t === "offplan") {
@@ -1158,9 +1158,9 @@
       h += '</div><p class="note">Nếu ăn thay hẳn một bữa trong kế hoạch, bỏ tick bữa đó ở mục Hôm nay.</p></div><div id="offRes"></div>';
     } else if (t === "mealtime") {
       h += sheetHead("Lỡ giờ ăn");
-      h += '<p class="note">Kế hoạch chuẩn: hộp tối 17–18h, tập 19–21h, bữa sau tập 22h. Chọn tình huống của bạn:</p>';
-      h += mtCard("Bỏ bữa trưa hoặc ăn trưa rất muộn", ["Ăn ngay một bữa nhẹ có đạm: bánh mì 2 trứng, hoặc 1 hộp sữa + 1 bánh mì (khoảng 400 kcal, 20g đạm).", "Không ăn bù gấp đôi vào bữa tối.", "Nếu đã ăn trưa sau 15h: ăn hộp tối sau khi tập, trước tập chỉ cần 1 quả chuối."]);
-      h += mtCard("Ăn hộp tối sát giờ tập (dưới 1 tiếng)", ["Chia đôi hộp: ăn nửa thịt và nửa cơm trước tập 45–60 phút.", "Tập xong ăn nửa còn lại + rau, thay cho bữa sau tập (bỏ 3 trứng, giữ sữa chua).", "Tổng calo trong ngày không đổi."]);
+      h += '<p class="note">Kế hoạch chuẩn: bữa tối 17–18h, tập 19–21h, bữa sau tập 22h. Chọn tình huống của bạn:</p>';
+      h += mtCard("Bỏ bữa trưa hoặc ăn trưa rất muộn", ["Ăn ngay một bữa nhẹ có đạm: bánh mì 2 trứng, hoặc 1 hộp sữa + 1 bánh mì (khoảng 400 kcal, 20g đạm).", "Không ăn bù gấp đôi vào bữa tối.", "Nếu đã ăn trưa sau 15h: ăn bữa tối sau khi tập, trước tập chỉ cần 1 quả chuối."]);
+      h += mtCard("Ăn bữa tối sát giờ tập (dưới 1 tiếng)", ["Chia đôi hộp: ăn nửa thịt và nửa cơm trước tập 45–60 phút.", "Tập xong ăn nửa còn lại + rau, thay cho bữa sau tập (bỏ 3 trứng, giữ sữa chua).", "Tổng calo trong ngày không đổi."]);
       h += mtCard("Tập muộn, về sau 22h30", ["Bữa sau tập rút gọn: 3 trứng + sữa chua, bỏ chuối để dễ ngủ.", "Ngủ trong vòng 1 tiếng sau khi ăn, vẫn cố đủ 7 tiếng.", "Hôm sau ăn sáng đúng giờ, không bỏ bữa."]);
       h += mtCard("Không mang được hộp, phải ăn ngoài bữa tối", ["Cơm gà luộc hoặc nướng, xin ít cơm: khoảng 600 kcal, 40g đạm.", "Phở bò tái, thêm 1 trứng: khoảng 500 kcal, 30g đạm.", "Bún chả: ăn nửa bún, hết thịt: khoảng 550 kcal, 30g đạm.", "Cơm văn phòng: 1 món thịt nạc + 1 trứng + rau, nửa bát cơm."], true);
       h += '<button class="btn dark" data-act="apply-event" data-v="mealtime">Ghi lại: hôm nay lỡ giờ ăn</button>';
@@ -1191,7 +1191,7 @@
       SH.plan = { today: [], perDay: 0, days: 0 };
     } else {
       var fixes = [], cutToday = 0, box = boxFor(k);
-      if (!hasPlanMeal(k, "toi")) { var rc = Math.round(box.riceG * 1.3); fixes.push("Hộp tối <b>bỏ cơm</b>, giữ thịt và rau (−" + rc + " kcal)"); cutToday += rc; }
+      if (!hasPlanMeal(k, "toi")) { var rc = Math.round(box.riceG * 1.3); fixes.push("Bữa tối <b>bỏ cơm</b>, giữ thịt và rau (−" + rc + " kcal)"); cutToday += rc; }
       if (!hasPlanMeal(k, "phu")) { fixes.push("Bữa sau tập <b>bỏ chuối</b> (−105 kcal)"); cutToday += 105; }
       if (!hasPlanMeal(k, "g7")) { fixes.push("<b>Bỏ G7</b> hôm nay (−70 kcal)"); cutToday += 70; }
       cutToday = Math.min(cutToday, over);
@@ -1225,7 +1225,7 @@
     h += '<div class="card"><h2>Mục tiêu mỗi ngày</h2><div class="grid2">';
     h += '<label class="field">Calo (kcal)<input id="setK" inputmode="numeric" value="' + t.kcal + '"></label><label class="field">Đạm (g)<input id="setP" inputmode="numeric" value="' + t.p + '"></label>';
     h += '<label class="field">Tinh bột (g)<input id="setC" inputmode="numeric" value="' + t.c + '"></label><label class="field">Chất béo (g)<input id="setF" inputmode="numeric" value="' + t.f + '"></label></div>';
-    h += '<p class="note">Mặc định theo kế hoạch Recomp: 2.150 kcal · 140g đạm · 250g tinh bột · 65g béo.</p></div>';
+    h += '<p class="note">Mặc định theo kế hoạch recomp: 2.150 kcal · 140g đạm · 250g tinh bột · 65g béo.</p></div>';
     h += '<div class="card"><h2>Mục tiêu dài hạn</h2><div class="grid2"><label class="field">Cân nặng mục tiêu (kg)<input id="setGW" inputmode="decimal" value="' + fmt(g.weight) + '"></label><label class="field">Giảm vòng bụng (cm)<input id="setGB" inputmode="decimal" value="' + fmt(g.waistDrop) + '"></label></div><p class="note">Đề xuất cho 171cm, 80kg làm recomp: khoảng 74–75kg và bụng nhỏ đi 6–8cm sau 4–6 tháng. Cân có thể giảm chậm vì cơ đang lên; vòng bụng mới là thước đo chính.</p></div>';
     h += '<button class="btn dark" data-act="save-settings">Lưu cài đặt</button>';
     h += '<div class="card"><h2>Sao lưu dữ liệu</h2><p class="note">Dữ liệu nằm trên điện thoại này. Sao lưu ra file rồi lưu vào Drive, Zalo "Cloud của tôi" hoặc gửi mail cho chính mình. Đổi máy thì dùng "Khôi phục".' + (lb ? " Lần gần nhất: " + new Date(lb).toLocaleString("vi-VN") + "." : "") + '</p>';
@@ -1234,7 +1234,7 @@
     h += '<div class="card"><h2>Nhập dữ liệu bằng mã</h2><p class="note">Dán mã bắt đầu bằng SOTAP1: (Claude gửi trong chat). Dữ liệu được gộp thêm, không xoá những gì đã có.</p><textarea id="pasteCode" rows="3" placeholder="SOTAP1:..." autocomplete="off" autocapitalize="off" spellcheck="false"></textarea><button class="btn dark" data-act="paste-import">Nhập</button></div>';
     h += '<div class="card"><h2>Cài app lên điện thoại</h2><ul class="plain"><li><b>iPhone:</b> mở bằng Safari → nút Chia sẻ → "Thêm vào MH chính".</li><li><b>Android:</b> mở bằng Chrome → menu ⋮ → "Cài đặt ứng dụng".</li></ul></div>';
     h += '<div class="card"><h2>Xoá toàn bộ</h2><p class="note">Xoá mọi buổi tập, món ăn, số đo và ảnh trên máy này.</p><button class="btn ghost" data-act="wipe">Xoá toàn bộ dữ liệu</button></div>';
-    h += '<p class="note" style="text-align:center">Sổ Tập Recomp · bản 2.2</p>';
+    h += '<p class="note" style="text-align:center">FitCore · bản 2.3</p>';
     SH = { kind: "settings" };
     openSheet(h);
   }
@@ -1278,12 +1278,12 @@
       return Promise.all(list.map(function (r) { return blobToData(r.blob).then(function (d) { return { id: r.id, date: r.date, kind: r.kind, slot: r.slot, ts: r.ts, data: d }; }); }));
     }).then(function (ph) { base.photosData = ph; return base; }) : Promise.resolve(base);
     p.then(function (obj) {
-      var name = "so-tap-" + todayKey() + (withPhotos ? "-anh" : "") + ".json", blob = new Blob([JSON.stringify(obj)], { type: "application/json" });
+      var name = "fitcore-" + todayKey() + (withPhotos ? "-anh" : "") + ".json", blob = new Blob([JSON.stringify(obj)], { type: "application/json" });
       var done = function () { S.settings.lastBackup = Date.now(); flush(); toast("Đã tạo file sao lưu " + name); render(); if (SH.kind === "settings") openSettings(); };
       try {
         var file = new File([blob], name, { type: "application/json" });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator.share({ files: [file], title: "Sao lưu Sổ Tập" }).then(done).catch(function (e) { if (e && e.name !== "AbortError") download(blob, name, done); });
+          navigator.share({ files: [file], title: "Sao lưu FitCore" }).then(done).catch(function (e) { if (e && e.name !== "AbortError") download(blob, name, done); });
           return;
         }
       } catch (e) {}
@@ -1335,7 +1335,7 @@
           closeSheet(); UI.sel = null; render();
           toast("Đã khôi phục: " + S.sessions.length + " buổi tập, " + Object.keys(S.days).length + " ngày" + (photos.length ? ", " + photos.length + " ảnh" : ""));
         });
-      } catch (e) { toast("File này không phải bản sao lưu của Sổ Tập."); }
+      } catch (e) { toast("File này không phải bản sao lưu của FitCore."); }
       importInput.value = "";
     };
     r.readAsText(f);
