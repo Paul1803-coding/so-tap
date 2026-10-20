@@ -1231,9 +1231,10 @@
     h += '<div class="card"><h2>Sao lưu dữ liệu</h2><p class="note">Dữ liệu nằm trên điện thoại này. Sao lưu ra file rồi lưu vào Drive, Zalo "Cloud của tôi" hoặc gửi mail cho chính mình. Đổi máy thì dùng "Khôi phục".' + (lb ? " Lần gần nhất: " + new Date(lb).toLocaleString("vi-VN") + "." : "") + '</p>';
     h += '<label class="toggle"><input type="checkbox" id="bkPhotos"><span>Kèm ảnh (file sẽ nặng hơn)</span></label>';
     h += '<div class="grid2"><button class="btn" data-act="backup">Sao lưu</button><button class="btn ghost" data-act="restore">Khôi phục</button></div></div>';
+    h += '<div class="card"><h2>Nhập dữ liệu bằng mã</h2><p class="note">Dán mã bắt đầu bằng SOTAP1: (Claude gửi trong chat). Dữ liệu được gộp thêm, không xoá những gì đã có.</p><textarea id="pasteCode" rows="3" placeholder="SOTAP1:..." autocomplete="off" autocapitalize="off" spellcheck="false"></textarea><button class="btn dark" data-act="paste-import">Nhập</button></div>';
     h += '<div class="card"><h2>Cài app lên điện thoại</h2><ul class="plain"><li><b>iPhone:</b> mở bằng Safari → nút Chia sẻ → "Thêm vào MH chính".</li><li><b>Android:</b> mở bằng Chrome → menu ⋮ → "Cài đặt ứng dụng".</li></ul></div>';
     h += '<div class="card"><h2>Xoá toàn bộ</h2><p class="note">Xoá mọi buổi tập, món ăn, số đo và ảnh trên máy này.</p><button class="btn ghost" data-act="wipe">Xoá toàn bộ dữ liệu</button></div>';
-    h += '<p class="note" style="text-align:center">Sổ Tập Recomp · bản 2.1</p>';
+    h += '<p class="note" style="text-align:center">Sổ Tập Recomp · bản 2.2</p>';
     SH = { kind: "settings" };
     openSheet(h);
   }
@@ -1294,6 +1295,30 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
     cb();
+  }
+  // Gộp dữ liệu từ nơi khác vào, không ghi đè thứ đã có
+  function mergeIn(o) {
+    var out = { sessions: 0, meals: 0, start: null };
+    if (o.settings && o.settings.startDate && !S.settings.startDate) { S.settings.startDate = o.settings.startDate; out.start = o.settings.startDate; }
+    (o.sessions || []).forEach(function (s) {
+      if (!s || !s.id || !PROGRAM[s.key] || S.sessions.some(function (x) { return x.id === s.id; })) return;
+      S.sessions.push(s); out.sessions++;
+    });
+    S.sessions.sort(function (a, b) { return b.ts - a.ts; });
+    if (out.sessions && S.sessions.length) S.prog.nextIndex = (ORDER.indexOf(S.sessions[0].key) + 1) % 4;
+    Object.keys(o.days || {}).forEach(function (k) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) return;
+      var src = o.days[k], d = day(k);
+      (src.meals || []).forEach(function (m) {
+        if (d.meals.some(function (x) { return x.id === m.id || (m.q && x.q === m.q); })) return;
+        d.meals.push(m); out.meals++;
+      });
+      Object.keys(src.c || {}).forEach(function (h) { if (src.c[h]) d.c[h] = true; });
+      if (typeof src.w === "number" && typeof d.w !== "number") d.w = src.w;
+      if (typeof src.waist === "number" && typeof d.waist !== "number") d.waist = src.waist;
+    });
+    Object.keys(o.checks || {}).forEach(function (k) { if (o.checks[k]) S.checks[k] = true; });
+    return out;
   }
   var importInput = document.getElementById("importFile");
   importInput.addEventListener("change", function () {
@@ -1383,6 +1408,15 @@
     }
     else if (a === "backup") backup();
     else if (a === "restore") importInput.click();
+    else if (a === "paste-import") {
+      var raw = (document.getElementById("pasteCode").value || "").replace(/\s+/g, "");
+      try {
+        if (raw.indexOf("SOTAP1:") !== 0) throw new Error("prefix");
+        var obj = JSON.parse(decodeURIComponent(escape(atob(raw.slice(7)))));
+        var res = mergeIn(obj); flush(); closeSheet(); UI.sel = null; render();
+        toast("Đã nhập: " + res.sessions + " buổi tập, " + res.meals + " món ăn" + (res.start ? ", ngày bắt đầu " + shortDate(res.start) : ""));
+      } catch (err) { toast("Mã không đúng. Copy lại toàn bộ mã, kể cả chữ SOTAP1: ở đầu."); }
+    }
     else if (a === "wipe") {
       if (b.getAttribute("data-armed")) {
         S = blankState(); flush();
