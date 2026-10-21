@@ -203,51 +203,111 @@
   ];
   var DAY_BY_DATE = {}; DAYS.forEach(function (d) { DAY_BY_DATE[d.d] = d; });
 
-  // ---------- Món tra cứu nhanh: tên, khẩu phần, kcal, đạm, tinh bột, béo ----------
+  // ---------- Món tra cứu nhanh: nhóm, tên, khẩu phần, kcal, đạm, tinh bột, béo (cỡ vừa) ----------
+  var FOOD_CATS = ["Bữa sáng", "Bún, phở, mì", "Cơm", "Ăn vặt, đồ uống", "Thực phẩm lẻ"];
   var FOODS = [
-    ["Cơm trắng", "1 chén (150g)", 195, 4, 43, 0.4],
-    ["Cơm trắng", "100g", 130, 2.7, 28, 0.3],
-    ["Bánh mì kẹp 2 trứng", "1 ổ", 430, 21, 48, 17],
-    ["Bánh mì thịt", "1 ổ", 420, 18, 50, 15],
-    ["Bánh mì không", "1 ổ", 240, 8, 48, 2],
-    ["Xôi đậu", "1 gói", 420, 10, 82, 6],
-    ["Xôi + trứng/thịt", "nửa suất", 380, 16, 50, 12],
-    ["Phở bò", "1 tô", 450, 25, 55, 12],
-    ["Bún bò Huế", "1 tô", 480, 25, 60, 14],
-    ["Bún chả", "1 phần", 600, 28, 65, 25],
-    ["Hủ tiếu", "1 tô", 420, 20, 58, 11],
-    ["Cơm tấm sườn", "1 đĩa", 650, 30, 75, 24],
-    ["Cơm gà, ít cơm", "1 đĩa", 600, 40, 60, 18],
-    ["Cơm căng tin chuẩn", "1 khay", 650, 40, 75, 20],
-    ["Gỏi cuốn", "2 cuốn", 180, 9, 28, 3],
-    ["Mì gói", "1 gói", 350, 7, 47, 14],
-    ["Ức gà (chín)", "100g", 165, 31, 0, 3.6],
-    ["Đùi gà bỏ da (chín)", "100g", 175, 24, 0, 8],
-    ["Thịt bò nạc", "100g", 170, 26, 0, 7],
-    ["Thăn lợn", "100g", 145, 21, 0, 6],
-    ["Cá hồi", "100g", 208, 20, 0, 13],
-    ["Cá basa", "100g", 125, 18, 0, 5],
-    ["Tôm", "100g", 100, 21, 0, 1.5],
-    ["Trứng gà", "1 quả", 72, 6.3, 0.4, 4.8],
-    ["Đậu phụ", "100g", 76, 8, 1.9, 4.8],
-    ["Sữa tươi không đường", "1 hộp 180ml", 110, 6, 8, 6],
-    ["Sữa chua không đường", "1 hộp 100g", 60, 3.5, 4.7, 3.3],
-    ["Sữa chua có đường", "1 hộp 100g", 95, 3.5, 15, 2.5],
-    ["Whey protein", "1 muỗng 30g", 120, 24, 3, 1.5],
-    ["Yến mạch", "40g", 150, 5, 27, 2.7],
-    ["Khoai lang luộc", "100g", 86, 1.6, 20, 0.1],
-    ["Chuối", "1 quả", 105, 1.3, 27, 0.4],
-    ["Táo", "1 quả", 95, 0.5, 25, 0.3],
-    ["Rau luộc / xào ít dầu", "1 đĩa 250g", 60, 4, 9, 1.5],
-    ["Dầu ăn", "1 thìa cà phê (5g)", 45, 0, 0, 5],
-    ["Cà phê G7 3in1", "1 gói", 70, 0.5, 11, 2.5],
-    ["Cà phê sữa đá", "1 ly", 150, 2, 24, 5],
-    ["Trà sữa trân châu", "1 ly size M", 400, 4, 65, 14],
-    ["Nước ngọt có ga", "1 lon 330ml", 140, 0, 35, 0],
-    ["Bia", "1 lon 330ml", 145, 1, 13, 0],
-    ["Đậu phộng", "30g", 170, 7, 5, 14],
-    ["Lẩu / nướng Hàn (ăn vừa)", "1 bữa", 1100, 60, 80, 55]
+    ["Bữa sáng", "Bánh mì kẹp 2 trứng", "1 ổ", 430, 21, 48, 17],
+    ["Bữa sáng", "Bánh mì thịt / pate", "1 ổ", 420, 18, 50, 15],
+    ["Bữa sáng", "Bánh mì xíu mại", "1 ổ", 480, 20, 55, 19],
+    ["Bữa sáng", "Bánh mì không", "1 ổ", 240, 8, 48, 2],
+    ["Bữa sáng", "Bánh mì sandwich", "2 lát", 150, 5, 28, 2],
+    ["Bữa sáng", "Xôi xéo", "1 gói", 450, 10, 70, 14],
+    ["Bữa sáng", "Xôi lạc / xôi đậu", "1 gói", 420, 10, 82, 6],
+    ["Bữa sáng", "Xôi thịt, trứng", "nửa suất", 380, 16, 50, 12],
+    ["Bữa sáng", "Xôi mặn đầy đủ", "1 suất", 600, 22, 85, 18],
+    ["Bữa sáng", "Bánh cuốn", "1 đĩa", 400, 15, 60, 10],
+    ["Bữa sáng", "Bánh bao nhân thịt", "1 cái", 330, 12, 45, 11],
+    ["Bữa sáng", "Bánh giò", "1 cái", 300, 8, 38, 13],
+    ["Bữa sáng", "Cháo thịt / cháo lòng", "1 bát", 350, 18, 40, 12],
+    ["Bữa sáng", "Khoai lang luộc", "1 củ 200g", 170, 3, 40, 0.2],
+    ["Bữa sáng", "Ngô luộc", "1 bắp", 130, 4, 27, 2],
+    ["Bữa sáng", "Yến mạch nấu sữa", "40g + 200ml sữa", 260, 12, 35, 8],
+    ["Bữa sáng", "Sữa đậu nành", "1 cốc 300ml", 130, 8, 12, 5],
+    ["Bún, phở, mì", "Phở bò", "1 tô", 450, 25, 55, 12],
+    ["Bún, phở, mì", "Phở gà", "1 tô", 420, 25, 55, 9],
+    ["Bún, phở, mì", "Phở cuốn", "5 cuốn", 380, 18, 45, 13],
+    ["Bún, phở, mì", "Bún bò Huế", "1 tô", 480, 25, 60, 14],
+    ["Bún, phở, mì", "Bún chả", "1 suất", 600, 28, 65, 25],
+    ["Bún, phở, mì", "Bún riêu", "1 tô", 420, 18, 55, 13],
+    ["Bún, phở, mì", "Bún thịt nướng / bún nem", "1 bát", 550, 22, 65, 20],
+    ["Bún, phở, mì", "Bún cá", "1 tô", 400, 22, 55, 9],
+    ["Bún, phở, mì", "Bún đậu mắm tôm", "1 suất", 700, 30, 70, 33],
+    ["Bún, phở, mì", "Hủ tiếu", "1 tô", 420, 20, 58, 11],
+    ["Bún, phở, mì", "Mì Quảng", "1 tô", 520, 25, 60, 18],
+    ["Bún, phở, mì", "Miến gà", "1 bát", 380, 22, 50, 8],
+    ["Bún, phở, mì", "Bánh canh", "1 tô", 450, 20, 60, 13],
+    ["Bún, phở, mì", "Mì xào bò", "1 đĩa", 650, 25, 75, 26],
+    ["Bún, phở, mì", "Mì gói", "1 gói", 350, 7, 47, 14],
+    ["Bún, phở, mì", "Mì gói + trứng", "1 bát", 420, 13, 47, 19],
+    ["Cơm", "Cơm căng tin chuẩn", "1 khay", 650, 40, 75, 20],
+    ["Cơm", "Cơm bụi 2 món + rau", "1 đĩa", 750, 30, 90, 28],
+    ["Cơm", "Cơm văn phòng", "1 hộp", 700, 30, 85, 25],
+    ["Cơm", "Cơm tấm sườn", "1 đĩa", 650, 30, 75, 24],
+    ["Cơm", "Cơm tấm sườn bì chả", "1 đĩa", 800, 35, 85, 33],
+    ["Cơm", "Cơm gà luộc / nướng, ít cơm", "1 đĩa", 600, 40, 60, 18],
+    ["Cơm", "Cơm gà xối mỡ", "1 đĩa", 750, 35, 80, 30],
+    ["Cơm", "Cơm rang dưa bò", "1 đĩa", 700, 22, 90, 26],
+    ["Cơm", "Cơm chiên trứng", "1 đĩa", 600, 15, 80, 22],
+    ["Cơm", "Lẩu / nướng (ăn vừa)", "1 bữa", 1100, 60, 80, 55],
+    ["Ăn vặt, đồ uống", "Cà phê G7 3in1", "1 gói", 70, 0.5, 11, 2.5],
+    ["Ăn vặt, đồ uống", "Cà phê đen đá ít đường", "1 ly", 30, 0, 7, 0],
+    ["Ăn vặt, đồ uống", "Cà phê sữa đá", "1 ly", 150, 2, 24, 5],
+    ["Ăn vặt, đồ uống", "Bạc xỉu", "1 ly", 190, 4, 28, 7],
+    ["Ăn vặt, đồ uống", "Trà sữa trân châu", "1 ly size M", 400, 4, 65, 14],
+    ["Ăn vặt, đồ uống", "Sinh tố bơ", "1 ly", 350, 5, 45, 17],
+    ["Ăn vặt, đồ uống", "Nước mía", "1 cốc", 180, 0, 45, 0],
+    ["Ăn vặt, đồ uống", "Nước ngọt có ga", "1 lon 330ml", 140, 0, 35, 0],
+    ["Ăn vặt, đồ uống", "Bia lon", "1 lon 330ml", 145, 1, 13, 0],
+    ["Ăn vặt, đồ uống", "Bia hơi", "1 cốc 500ml", 200, 2, 18, 0],
+    ["Ăn vặt, đồ uống", "Chè", "1 cốc", 300, 5, 60, 5],
+    ["Ăn vặt, đồ uống", "Bánh tráng trộn", "1 túi", 350, 8, 50, 13],
+    ["Ăn vặt, đồ uống", "Nem chua rán", "5 cái", 300, 12, 20, 19],
+    ["Ăn vặt, đồ uống", "Bánh quy", "3 cái", 150, 2, 20, 7],
+    ["Ăn vặt, đồ uống", "Snack khoai tây", "1 gói 50g", 270, 3, 25, 18],
+    ["Ăn vặt, đồ uống", "Chuối", "1 quả", 105, 1.3, 27, 0.4],
+    ["Ăn vặt, đồ uống", "Táo", "1 quả", 95, 0.5, 25, 0.3],
+    ["Ăn vặt, đồ uống", "Cam", "1 quả", 60, 1, 15, 0.2],
+    ["Ăn vặt, đồ uống", "Xoài", "1 quả", 200, 3, 50, 1],
+    ["Ăn vặt, đồ uống", "Dưa hấu", "1 bát 300g", 90, 2, 22, 0.5],
+    ["Ăn vặt, đồ uống", "Đậu phộng", "1 nắm 30g", 170, 7, 5, 14],
+    ["Thực phẩm lẻ", "Cơm trắng", "1 chén (150g)", 195, 4, 43, 0.4],
+    ["Thực phẩm lẻ", "Ức gà (chín)", "100g", 165, 31, 0, 3.6],
+    ["Thực phẩm lẻ", "Đùi gà bỏ da (chín)", "100g", 175, 24, 0, 8],
+    ["Thực phẩm lẻ", "Thịt bò nạc", "100g", 170, 26, 0, 7],
+    ["Thực phẩm lẻ", "Thăn lợn", "100g", 145, 21, 0, 6],
+    ["Thực phẩm lẻ", "Thịt ba chỉ", "100g", 420, 14, 0, 40],
+    ["Thực phẩm lẻ", "Cá hồi", "100g", 208, 20, 0, 13],
+    ["Thực phẩm lẻ", "Cá basa", "100g", 125, 18, 0, 5],
+    ["Thực phẩm lẻ", "Tôm", "100g", 100, 21, 0, 1.5],
+    ["Thực phẩm lẻ", "Trứng gà", "1 quả", 72, 6.3, 0.4, 4.8],
+    ["Thực phẩm lẻ", "Lòng trắng trứng", "1 quả", 17, 3.6, 0.2, 0],
+    ["Thực phẩm lẻ", "Đậu phụ", "100g", 76, 8, 1.9, 4.8],
+    ["Thực phẩm lẻ", "Giò lụa", "100g", 180, 13, 4, 13],
+    ["Thực phẩm lẻ", "Sữa tươi không đường", "1 hộp 180ml", 110, 6, 8, 6],
+    ["Thực phẩm lẻ", "Sữa chua không đường", "1 hộp 100g", 60, 3.5, 4.7, 3.3],
+    ["Thực phẩm lẻ", "Sữa chua có đường", "1 hộp 100g", 95, 3.5, 15, 2.5],
+    ["Thực phẩm lẻ", "Whey protein", "1 muỗng 30g", 120, 24, 3, 1.5],
+    ["Thực phẩm lẻ", "Rau luộc", "1 đĩa 250g", 60, 4, 9, 1.5],
+    ["Thực phẩm lẻ", "Dầu ăn", "1 thìa cà phê (5g)", 45, 0, 0, 5]
   ];
+  function foodByName(n) { return FOODS.filter(function (f) { return f[1] === n; })[0]; }
+
+  // ---------- Ghép đĩa: ước lượng bằng bàn tay, không cần cân ----------
+  // Món mặn tính cho 1 phần = cỡ lòng bàn tay (≈100g chín): tên, kcal, đạm, tinh bột, béo
+  var PROT = {
+    ga: ["Gà bỏ da", 165, 31, 0, 3.6], gada: ["Gà có da, đùi gà", 215, 26, 0, 12],
+    lonnac: ["Thịt lợn nạc", 170, 27, 0, 6], bachi: ["Thịt ba chỉ", 420, 14, 0, 40], suon: ["Sườn lợn", 290, 20, 0, 23],
+    thitxay: ["Thịt xay, thịt viên", 250, 18, 2, 19], bo: ["Thịt bò", 220, 27, 0, 12],
+    ca: ["Cá trắng (basa, rô phi)", 130, 20, 0, 5], cabeo: ["Cá béo (thu, hồi, nục)", 205, 20, 0, 13], tom: ["Tôm, mực", 100, 20, 1, 1.5],
+    trung: ["Trứng (2 quả)", 145, 13, 1, 10], dauphu: ["Đậu phụ", 80, 8, 2, 5], gio: ["Giò, chả", 180, 13, 4, 13]
+  };
+  // Cách nấu cộng thêm cho mỗi phần: tên, kcal, tinh bột, béo
+  var COOK = { luoc: ["Luộc, hấp, nướng", 0, 0, 0], xao: ["Xào", 45, 0, 5], kho: ["Kho, rim, sốt", 60, 5, 4], ran: ["Rán, chiên", 90, 0, 10], quay: ["Quay, xối mỡ", 80, 3, 8] };
+  var COOK_SHORT = { luoc: "luộc", xao: "xào", kho: "kho", ran: "rán", quay: "quay" };
+  var RICE = [195, 4, 43, 0.4];
+  var SIZES = [["Nhỏ", 0.75], ["Vừa", 1], ["Lớn", 1.35]];
+  var SLOT_PLAN = { "Sáng": "sang", "Trưa": "trua", "Tối": "toi" };
+
   var SLOTS = ["Sáng", "Trưa", "Tối", "Phụ"];
 
   // =====================================================================
@@ -580,7 +640,6 @@
     });
     var h = UI.tab === "today" ? vToday() : UI.tab === "train" ? vTrain() : UI.tab === "food" ? vFood() : UI.tab === "prep" ? vPrep() : vProgress();
     view.innerHTML = h;
-    if (UI.tab === "food") renderResults();
     hydratePhotos(view);
     if (focusId) {
       var el = document.getElementById(focusId);
@@ -651,7 +710,7 @@
       var on = !!d.c[x.id];
       h += '<button class="check' + (on ? " on" : "") + '" aria-pressed="' + on + '" data-act="habit" data-v="' + x.id + '">' + CHECK_SVG + '<span><span class="t">' + x.t + '</span><br><span class="d">' + x.d + "</span></span></button>";
     });
-    h += '</div><button class="btn ghost sm" data-act="photo" data-kind="meal" style="align-self:flex-start">📷 Chụp ảnh bữa ăn</button></div>';
+    h += '</div><p class="note">Ăn khác kế hoạch? Ghi bằng nút dưới đây, app sẽ thay bữa đó trong kế hoạch.</p><div class="row" style="gap:6px"><button class="btn ghost sm" data-act="open-build" data-r="1">🍚 Ăn cơm khác</button><button class="btn ghost sm" data-act="open-dish" data-r="1">🍜 Ăn món khác</button><button class="btn ghost sm" data-act="photo" data-kind="meal">📷 Ảnh</button></div></div>';
 
     // Workout
     h += '<div class="strip"><div class="cell"><span class="label">Tuần</span><span class="big num">' + w + '</span></div><div class="cell"><span class="label">Buổi tuần này</span><span class="big num">' + count + '<span class="muted" style="font-size:18px"> /' + G().weekly + '</span></span></div><div class="cell"><span class="label">Buổi kế tiếp</span><span class="big">' + PROGRAM[nk].name + "</span></div></div>";
@@ -817,7 +876,7 @@
     var k = UI.date, d = peekDay(k), h = dateBar();
     h += energyCard(k, false);
     h += '<div class="card"><h2>Đã ăn</h2>';
-    if (!d.meals.length) h += '<p class="empty">Chưa ghi món nào. Tick các bữa trong kế hoạch ở mục Hôm nay, hoặc tìm món bên dưới.</p>';
+    if (!d.meals.length) h += '<p class="empty">Chưa ghi món nào. Tick các bữa trong kế hoạch ở mục Hôm nay, hoặc thêm bữa ăn bên dưới.</p>';
     SLOTS.forEach(function (sl) {
       var items = d.meals.filter(function (m) { return m.slot === sl; });
       if (!items.length) return;
@@ -844,10 +903,7 @@
         return '<button class="sit-btn" data-act="recent" data-v="' + i + '">+ ' + esc(r.name) + ' <span class="muted num">' + int(r.kcal) + "</span></button>";
       }).join("") + '</div><p class="note">Bấm một lần là thêm vào bữa ' + defaultSlot().toLowerCase() + ".</p></div>";
     }
-    h += '<div class="card"><h2>Thêm món</h2><input id="q" placeholder="Tìm: phở, cơm, ức gà, trứng…" value="' + esc(UI.q) + '" autocomplete="off" aria-label="Tìm món">';
-    h += '<div class="results" id="results"></div><div class="grid2"><label class="field">Số phần<input id="qty" inputmode="decimal" value="1"></label><label class="field">Bữa' + slotSel("slotA") + "</label></div>";
-    h += '<button class="btn dark" data-act="addfood">Thêm món đã chọn</button><p class="note">Số liệu là ước tính trung bình cho khẩu phần thường gặp.</p></div>';
-
+    h += '<div class="card"><h2>Thêm bữa ăn</h2><div class="grid2"><button class="bigbtn" data-act="open-build"><b>Ghép đĩa cơm</b><span>Cơm căng tin, cơm bụi, cơm nhà</span></button><button class="bigbtn" data-act="open-dish"><b>Chọn món</b><span>Phở, bún, bánh mì, xôi, đồ uống…</span></button></div><p class="note">Không cần biết gram: ước lượng bằng nắm tay, lòng bàn tay và cỡ nhỏ, vừa, lớn.</p></div>';
     h += '<details class="card"><summary>Tự nhập số liệu</summary><label class="field">Tên món<input id="cName"></label><div class="grid2">';
     h += '<label class="field">Calo (kcal)<input id="cK" inputmode="decimal"></label><label class="field">Đạm (g)<input id="cP" inputmode="decimal"></label>';
     h += '<label class="field">Tinh bột (g)<input id="cC" inputmode="decimal"></label><label class="field">Chất béo (g)<input id="cF" inputmode="decimal"></label></div>';
@@ -872,15 +928,6 @@
     return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.n - a.n || (b.last > a.last ? 1 : -1); }).slice(0, 8);
   }
   function defaultSlot() { var hr = new Date().getHours(); return hr < 10 ? "Sáng" : hr < 15 ? "Trưa" : hr < 21 ? "Tối" : "Phụ"; }
-  function renderResults() {
-    var el = document.getElementById("results"); if (!el) return;
-    var q = norm(UI.q.trim()), list = [];
-    FOODS.forEach(function (f, i) { if (!q || norm(f[0]).indexOf(q) >= 0) list.push(i); });
-    el.innerHTML = list.length ? list.map(function (i) {
-      var f = FOODS[i];
-      return '<button data-pick="' + i + '" class="' + (UI.pick === i ? "sel" : "") + '"><span><b>' + esc(f[0]) + '</b> <span class="p">' + esc(f[1]) + '</span><br><span class="p">Đạm ' + fmt(f[3]) + "g · TB " + fmt(f[4]) + "g · Béo " + fmt(f[5]) + 'g</span></span><span class="num">' + f[2] + "</span></button>";
-    }).join("") : '<p class="empty" style="padding:10px 12px">Không thấy món này. Dùng phần "Tự nhập số liệu" bên dưới.</p>';
-  }
 
   // ---------- Bữa tối ----------
   function prepTasks(dd) {
@@ -1178,7 +1225,7 @@
   }
   function mtCard(title, lines, withLog) {
     var h = '<details class="card"><summary>' + title + '</summary><ul class="plain">' + lines.map(function (l) { return "<li>" + l + "</li>"; }).join("") + "</ul>";
-    if (withLog) h += '<div class="sit"><button class="sit-btn" data-act="log-out" data-v="13">+ Cơm gà</button><button class="sit-btn" data-act="log-out" data-v="7">+ Phở bò</button><button class="sit-btn" data-act="log-out" data-v="9">+ Bún chả</button><button class="sit-btn" data-act="log-out" data-v="12">+ Cơm tấm</button></div>';
+    if (withLog) h += '<div class="sit"><button class="sit-btn" data-act="log-out" data-v="Cơm gà luộc / nướng, ít cơm">+ Cơm gà</button><button class="sit-btn" data-act="log-out" data-v="Phở bò">+ Phở bò</button><button class="sit-btn" data-act="log-out" data-v="Bún chả">+ Bún chả</button><button class="sit-btn" data-act="log-out" data-v="Cơm văn phòng">+ Cơm văn phòng</button></div>';
     return h + "</details>";
   }
   function offplanResult() {
@@ -1209,6 +1256,110 @@
     return h;
   }
 
+  // ---------- Ghép đĩa cơm ----------
+  function rerenderSheet(html) { var st = sheetBody.scrollTop; sheetBody.innerHTML = html; sheetBody.scrollTop = st; }
+  function slotSeg(act, cur) {
+    return '<div class="seg4">' + SLOTS.map(function (s) { return '<button aria-pressed="' + (s === cur) + '" data-act="' + act + '" data-v="' + s + '">' + s + "</button>"; }).join("") + "</div>";
+  }
+  function stepper(f, val, i) {
+    var di = i == null ? "" : ' data-i="' + i + '"';
+    return '<span class="step"><button data-act="b-step" data-f="' + f + '"' + di + ' data-d="-1" aria-label="Bớt">−</button><b class="num stv">' + fmt(val) + '</b><button data-act="b-step" data-f="' + f + '"' + di + ' data-d="1" aria-label="Thêm">+</button></span>';
+  }
+  // Đĩa mặc định theo bữa: sáng là cơm trứng, trưa/tối là đĩa căng tin điển hình
+  function builderDefaults(slot) {
+    if (slot === "Sáng" || slot === "Phụ") return { rice: 1, items: [{ t: "trung", m: "ran", n: 1 }], veg: 0, vm: "luoc", soup: 0 };
+    return { rice: 1, items: [{ t: "lonnac", m: "kho", n: 1 }, { t: "ga", m: "xao", n: 1 }], veg: 1, vm: "luoc", soup: 1 };
+  }
+  function openBuilder(replace) {
+    var slot = defaultSlot();
+    SH = Object.assign({ kind: "build", replace: replace, slot: slot, touched: false }, builderDefaults(slot));
+    openSheet(builderHtml());
+  }
+  function builderCalc(st) {
+    var k = st.rice * RICE[0], p = st.rice * RICE[1], c = st.rice * RICE[2], f = st.rice * RICE[3], parts = [];
+    if (st.rice) parts.push(fmt(st.rice) + " nắm cơm");
+    st.items.forEach(function (it) {
+      var pr = PROT[it.t], ck = COOK[it.m];
+      k += (pr[1] + ck[1]) * it.n; p += pr[2] * it.n; c += (pr[3] + ck[2]) * it.n; f += (pr[4] + ck[3]) * it.n;
+      parts.push(pr[0].replace(/ \(.*\)/, "").toLowerCase() + " " + COOK_SHORT[it.m] + (it.n !== 1 ? " ×" + fmt(it.n) : ""));
+    });
+    if (st.veg) { k += st.veg * (40 + (st.vm === "xao" ? 45 : 0)); p += st.veg * 2; c += st.veg * 7; f += st.veg * (0.3 + (st.vm === "xao" ? 5 : 0)); parts.push("rau " + (st.vm === "xao" ? "xào" : "luộc")); }
+    if (st.soup === 1) { k += 30; p += 1; c += 5; f += 0.5; parts.push("canh rau"); }
+    if (st.soup === 2) { k += 80; p += 6; c += 4; f += 4.5; parts.push("canh thịt"); }
+    return { kcal: Math.round(k), p: Math.round(p), c: Math.round(c), f: Math.round(f), name: (st.slot === "Trưa" || st.slot === "Tối" ? "Cơm " + st.slot.toLowerCase() : "Đĩa cơm") + ": " + parts.join(", ") };
+  }
+  function builderHtml() {
+    var st = SH, r = builderCalc(st), h = sheetHead("Ghép đĩa cơm");
+    h += '<p class="note">Nhìn đĩa rồi chọn, không cần cân.' + (st.replace && SLOT_PLAN[st.slot] ? " Bữa " + st.slot.toLowerCase() + " trong kế hoạch sẽ được thay bằng đĩa này." : "") + "</p>";
+    h += slotSeg("b-slot", st.slot);
+    h += '<div class="card"><div class="row between"><h2>Cơm</h2>' + stepper("rice", st.rice) + '</div><p class="note">1 nắm tay ≈ 1 chén cơm vừa ≈ 150g. Đĩa cơm bụi thường 1,5–2 nắm.</p></div>';
+    h += '<div class="card"><h2>Món mặn</h2>';
+    st.items.forEach(function (it, i) {
+      h += '<div class="bitem"><div class="grid2"><select data-act="b-t" data-i="' + i + '" aria-label="Loại thịt">' + Object.keys(PROT).map(function (k) { return '<option value="' + k + '"' + (k === it.t ? " selected" : "") + ">" + PROT[k][0] + "</option>"; }).join("") + '</select><select data-act="b-m" data-i="' + i + '" aria-label="Cách nấu">' + Object.keys(COOK).map(function (k) { return '<option value="' + k + '"' + (k === it.m ? " selected" : "") + ">" + COOK[k][0] + "</option>"; }).join("") + '</select></div><div class="row between"><span class="note">Số phần</span><span class="row" style="gap:6px">' + stepper("item", it.n, i) + '<button class="x" data-act="b-del" data-i="' + i + '" aria-label="Bỏ món">×</button></span></div></div>';
+    });
+    if (st.items.length < 4) h += '<button class="btn ghost sm" data-act="b-additem" style="align-self:flex-start">+ Thêm món mặn</button>';
+    h += '<p class="note">1 phần = cỡ lòng bàn tay, dày bằng bàn tay (≈100g thịt chín). Trứng: 1 phần = 2 quả. Món rán, xào, kho tính thêm dầu mỡ.</p></div>';
+    h += '<div class="card"><div class="row between"><h2>Rau</h2>' + stepper("veg", st.veg) + '</div><div class="seg2 wide"><button aria-pressed="' + (st.vm === "luoc") + '" data-act="b-vm" data-v="luoc">Luộc</button><button aria-pressed="' + (st.vm === "xao") + '" data-act="b-vm" data-v="xao">Xào</button></div><p class="note">1 phần ≈ nửa đĩa rau hoặc 1 bát.</p></div>';
+    h += '<div class="card"><h2>Canh</h2><div class="seg3">' + [["0", "Không"], ["1", "Canh rau"], ["2", "Canh thịt, xương"]].map(function (x) { return '<button aria-pressed="' + (st.soup === +x[0]) + '" data-act="b-soup" data-v="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div></div>";
+    h += '<div class="btotal"><div class="row between" style="align-items:flex-end"><div><span class="huge num">' + int(r.kcal) + '</span> <span class="note">kcal</span></div><span class="note num">Đạm ' + r.p + "g · TB " + r.c + "g · Béo " + r.f + 'g</span></div><button class="btn" data-act="b-save">Thêm vào bữa ' + st.slot.toLowerCase() + "</button></div>";
+    return h;
+  }
+
+  // ---------- Chọn món có sẵn ----------
+  function openDish(replace) {
+    SH = { kind: "dish", replace: replace, slot: defaultSlot(), cat: defaultSlot() === "Sáng" ? "Bữa sáng" : "Cơm", q: "", pick: null, size: 1, egg: false, qty: 1 };
+    openSheet(dishHtml());
+  }
+  function dishList() {
+    var q = norm(SH.q.trim()), out = [];
+    if (!q) FOODS.forEach(function (f, i) { if (f[0] === SH.cat) out.push(i); });
+    else {
+      // Khớp đúng cả từ trước, rồi đầu tên, rồi đầu một từ; "pho" ra phở chứ không ra "văn phòng"
+      var qw = q.split(/\s+/), scored = [];
+      FOODS.forEach(function (f, i) {
+        var n = norm(f[1]), words = n.split(/[^a-z0-9]+/), sc = 9;
+        if (qw.every(function (x) { return words.indexOf(x) >= 0; })) sc = 0;
+        else if (n.indexOf(q) === 0) sc = 1;
+        else if (qw.every(function (x) { return words.some(function (w) { return w.indexOf(x) === 0; }); })) sc = 2;
+        else if (n.indexOf(q) >= 0) sc = 3;
+        if (sc < 9) scored.push([sc, i]);
+      });
+      var best = scored.length ? Math.min.apply(null, scored.map(function (x) { return x[0]; })) : 9;
+      scored.filter(function (x) { return best > 0 || x[0] <= 1; }).sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; }).forEach(function (x) { out.push(x[1]); });
+    }
+    if (!out.length) return '<p class="empty" style="padding:10px 12px">Không thấy món này. Thử "Ghép đĩa cơm" hoặc tự nhập ở mục Ăn.</p>';
+    return out.map(function (i) { var f = FOODS[i]; return '<button class="' + (SH.pick === i ? "sel" : "") + '" data-act="d-pick" data-v="' + i + '"><span><b>' + esc(f[1]) + '</b> <span class="p">' + esc(f[2]) + '</span></span><span class="num">' + f[3] + "</span></button>"; }).join("");
+  }
+  function dishCalc() {
+    var f = FOODS[SH.pick], m = SIZES[SH.size][1] * SH.qty, e = SH.egg ? SH.qty : 0;
+    return { kcal: Math.round(f[3] * m + 72 * e), p: Math.round(f[4] * m + 6.3 * e), c: Math.round(f[5] * m + 0.4 * e), f: Math.round(f[6] * m + 4.8 * e),
+      name: (SH.qty !== 1 ? fmt(SH.qty) + " × " : "") + f[1] + (SH.size !== 1 ? " (cỡ " + SIZES[SH.size][0].toLowerCase() + ")" : "") + (SH.egg ? " + trứng" : "") };
+  }
+  function dishHtml() {
+    var h = sheetHead("Chọn món");
+    if (SH.replace && SLOT_PLAN[SH.slot]) h += '<p class="note">Bữa ' + SH.slot.toLowerCase() + " trong kế hoạch sẽ được thay bằng món này.</p>";
+    h += slotSeg("d-slot", SH.slot);
+    h += '<input id="dishQ" placeholder="Tìm món: phở, xôi, bánh mì…" value="' + esc(SH.q) + '" autocomplete="off" aria-label="Tìm món">';
+    if (!SH.q) h += '<div class="sit">' + FOOD_CATS.map(function (c) { return '<button class="sit-btn' + (c === SH.cat ? " on" : "") + '" data-act="d-cat" data-v="' + c + '">' + c + "</button>"; }).join("") + "</div>";
+    h += '<div class="results" id="dishList">' + dishList() + "</div>";
+    if (SH.pick != null) {
+      var r = dishCalc();
+      h += '<div class="btotal"><p><b>' + esc(FOODS[SH.pick][1]) + '</b> <span class="note">' + esc(FOODS[SH.pick][2]) + "</span></p>";
+      h += '<div class="seg3">' + SIZES.map(function (z, i) { return '<button aria-pressed="' + (SH.size === i) + '" data-act="d-size" data-v="' + i + '">' + z[0] + "</button>"; }).join("") + "</div>";
+      h += '<div class="row between"><label class="toggle"><input type="checkbox" data-act="d-egg"' + (SH.egg ? " checked" : "") + '><span>+ 1 trứng</span></label><span class="row" style="gap:6px"><span class="note">Số lượng</span>' + stepper("qty", SH.qty) + "</span></div>";
+      h += '<div class="row between" style="align-items:flex-end"><div><span class="huge num">' + int(r.kcal) + '</span> <span class="note">kcal</span></div><span class="note num">Đạm ' + r.p + "g · TB " + r.c + "g · Béo " + r.f + 'g</span></div><button class="btn" data-act="d-save">Thêm vào bữa ' + SH.slot.toLowerCase() + "</button></div>";
+    } else h += '<p class="note">Cỡ "vừa" là suất bình thường ở quán. Tô to, gọi đặc biệt thì chọn "lớn".</p>';
+    return h;
+  }
+  function saveSheetMeal(r) {
+    var k = UI.date, d = day(k), planId = SH.replace ? SLOT_PLAN[SH.slot] : null, removed = false;
+    if (planId) d.meals = d.meals.filter(function (m) { if (m.q === planId) { removed = true; return false; } return true; });
+    d.meals.push({ id: uid(), slot: SH.slot, name: r.name, kcal: r.kcal, p: r.p, c: r.c, f: r.f });
+    var slot = SH.slot;
+    flush(); closeSheet(); render();
+    toast("Đã thêm vào bữa " + slot.toLowerCase() + ": " + int(r.kcal) + " kcal" + (removed ? ", thay cho bữa trong kế hoạch" : ""));
+  }
+
   function openSwap(slotId) {
     var slot = EXDB[slotId], cur = actualEx(slot).id, alts = ALTS[slotId] || [], h = sheetHead("Đổi bài");
     h += '<p class="note">' + (slot.t === "C" ? "Đây là bài compound chính, nên giữ ít nhất 4–6 tuần để đo được tiến bộ. Chỉ đổi khi máy bận hoặc muốn đổi không khí." : "Bài cô lập đổi thoải mái, nên giữ bài mới 3–4 tuần rồi hãy đổi tiếp.") + " Bài đã đổi sẽ dùng cho các buổi sau cho đến khi bạn đổi lại.</p><div class=\"list\">";
@@ -1234,7 +1385,7 @@
     h += '<div class="card"><h2>Nhập dữ liệu bằng mã</h2><p class="note">Dán mã bắt đầu bằng SOTAP1: (Claude gửi trong chat). Dữ liệu được gộp thêm, không xoá những gì đã có.</p><textarea id="pasteCode" rows="3" placeholder="SOTAP1:..." autocomplete="off" autocapitalize="off" spellcheck="false"></textarea><button class="btn dark" data-act="paste-import">Nhập</button></div>';
     h += '<div class="card"><h2>Cài app lên điện thoại</h2><ul class="plain"><li><b>iPhone:</b> mở bằng Safari → nút Chia sẻ → "Thêm vào MH chính".</li><li><b>Android:</b> mở bằng Chrome → menu ⋮ → "Cài đặt ứng dụng".</li></ul></div>';
     h += '<div class="card"><h2>Xoá toàn bộ</h2><p class="note">Xoá mọi buổi tập, món ăn, số đo và ảnh trên máy này.</p><button class="btn ghost" data-act="wipe">Xoá toàn bộ dữ liệu</button></div>';
-    h += '<p class="note" style="text-align:center">FitCore · bản 2.3</p>';
+    h += '<p class="note" style="text-align:center">FitCore · bản 2.4</p>';
     SH = { kind: "settings" };
     openSheet(h);
   }
@@ -1440,8 +1591,9 @@
     }
     else if (a === "apply-event") { addEvent(k, v); flush(); closeSheet(); render(); toast("Đã ghi lại"); }
     else if (a === "log-out") {
-      var f2 = FOODS[+v]; day(k).meals.push({ id: uid(), slot: "Tối", name: f2[0] + " (" + f2[1] + ")", kcal: f2[2], p: f2[3], c: f2[4], f: f2[5] });
-      addEvent(k, "mealtime"); flush(); render(); toast("Đã thêm " + f2[0]);
+      var f2 = foodByName(v); if (!f2) return;
+      day(k).meals.push({ id: uid(), slot: "Tối", name: f2[1] + " (" + f2[2] + ")", kcal: f2[3], p: f2[4], c: f2[5], f: f2[6] });
+      addEvent(k, "mealtime"); flush(); render(); toast("Đã thêm " + f2[1]);
     }
     else if (a === "apply-tired") {
       var key = nextKey(), w = currentWeek(), dr = draftFor(key, w).d;
@@ -1449,6 +1601,32 @@
       else { addEvent(k, "tired"); dr.tired = true; toast("Buổi " + PROGRAM[key].name + " sẽ nhẹ hơn hôm nay"); }
       flush(); closeSheet(); render();
     }
+    else if (a === "b-slot" || a === "d-slot") {
+      SH.slot = v;
+      if (SH.kind === "build" && !SH.touched) Object.assign(SH, builderDefaults(v));
+      rerenderSheet(SH.kind === "build" ? builderHtml() : dishHtml());
+    }
+    else if (/^b-(step|additem|del|vm|soup)$/.test(a) && SH.kind === "build" && (SH.touched = true) && false) {}
+    else if (a === "b-step") {
+      var f = b.getAttribute("data-f"), dl = +b.getAttribute("data-d") * 0.5, bi = +b.getAttribute("data-i");
+      if (f === "rice") SH.rice = Math.max(0, Math.min(4, SH.rice + dl));
+      else if (f === "veg") SH.veg = Math.max(0, Math.min(3, SH.veg + dl));
+      else if (f === "item") SH.items[bi].n = Math.max(0.5, Math.min(4, SH.items[bi].n + dl));
+      else if (f === "qty") SH.qty = Math.max(0.5, Math.min(5, SH.qty + dl));
+      rerenderSheet(SH.kind === "build" ? builderHtml() : dishHtml());
+    }
+    else if (a === "b-additem") { SH.items.push({ t: "ga", m: "luoc", n: 1 }); rerenderSheet(builderHtml()); }
+    else if (a === "b-del") { SH.items.splice(+b.getAttribute("data-i"), 1); rerenderSheet(builderHtml()); }
+    else if (a === "b-vm") { SH.vm = v; rerenderSheet(builderHtml()); }
+    else if (a === "b-soup") { SH.soup = +v; rerenderSheet(builderHtml()); }
+    else if (a === "b-save") {
+      if (!SH.rice && !SH.items.length && !SH.veg) { toast("Đĩa đang trống, thêm cơm hoặc món mặn"); return; }
+      saveSheetMeal(builderCalc(SH));
+    }
+    else if (a === "d-cat") { SH.cat = v; SH.pick = null; rerenderSheet(dishHtml()); }
+    else if (a === "d-pick") { SH.pick = +v; SH.size = 1; SH.egg = false; SH.qty = 1; rerenderSheet(dishHtml()); var bt = sheetBody.querySelector(".btotal"); if (bt) bt.scrollIntoView({ block: "nearest" }); }
+    else if (a === "d-size") { SH.size = +v; rerenderSheet(dishHtml()); }
+    else if (a === "d-save") { if (SH.pick != null) saveSheetMeal(dishCalc()); }
     else if (a === "do-swap") {
       var slotId = b.getAttribute("data-slot");
       if (v === slotId) delete S.swaps[slotId]; else S.swaps[slotId] = v;
@@ -1470,8 +1648,6 @@
   view.addEventListener("click", function (e) {
     var go = e.target.closest("[data-goto]");
     if (go) { UI.tab = go.getAttribute("data-goto"); if (UI.tab === "train") UI.sel = null; render(); window.scrollTo(0, 0); return; }
-    var pk = e.target.closest("[data-pick]");
-    if (pk) { UI.pick = +pk.getAttribute("data-pick"); renderResults(); return; }
     var b = e.target.closest("[data-act]"); if (!b || b.tagName === "INPUT" || b.tagName === "SELECT") return;
     var a = b.getAttribute("data-act"), v = b.getAttribute("data-v"), w = currentWeek();
     var exId = b.getAttribute("data-ex"), si = +b.getAttribute("data-i");
@@ -1539,12 +1715,8 @@
     }
     else if (a === "finish-yes") finish();
     else if (a === "finish-no") { UI.confirm = false; render(); }
-    else if (a === "addfood") {
-      if (UI.pick == null) { toast("Chọn một món trong danh sách trước"); return; }
-      var f = FOODS[UI.pick], q = num(document.getElementById("qty").value) || 1;
-      day(UI.date).meals.push({ id: uid(), slot: document.getElementById("slotA").value, name: (q !== 1 ? fmt(q) + " × " : "") + f[0] + " (" + f[1] + ")", kcal: f[2] * q, p: f[3] * q, c: f[4] * q, f: f[5] * q });
-      UI.pick = null; UI.q = ""; save(); render(); toast("Đã thêm " + f[0]);
-    }
+    else if (a === "open-build") openBuilder(b.getAttribute("data-r") === "1");
+    else if (a === "open-dish") openDish(b.getAttribute("data-r") === "1");
     else if (a === "addcustom") {
       var name = document.getElementById("cName").value.trim(), kc = num(document.getElementById("cK").value);
       if (!name || kc == null || kc < 0) { toast("Cần nhập tên món và số calo"); return; }
@@ -1571,7 +1743,6 @@
 
   view.addEventListener("input", function (e) {
     var t = e.target, a = t.getAttribute && t.getAttribute("data-act");
-    if (t.id === "q") { UI.q = t.value; UI.pick = null; renderResults(); return; }
     if (a === "skg" || a === "srep") {
       var dr = draftFor(UI.sel, currentWeek()).d, s = dr.sets[t.getAttribute("data-ex")][+t.getAttribute("data-i")];
       if (a === "skg") { var n = num(t.value); s.kg = n == null ? "" : n; } else s.reps = parseInt(t.value, 10) || "";
@@ -1582,6 +1753,18 @@
       var ok = field === "w" ? n2 >= 30 && n2 <= 250 : n2 >= 40 && n2 <= 200;
       d[field] = ok ? n2 : null; save();
     }
+  });
+  sheet.addEventListener("change", function (e) {
+    var t = e.target, a = t.getAttribute("data-act");
+    if (a === "b-t") { SH.touched = true; SH.items[+t.getAttribute("data-i")].t = t.value; rerenderSheet(builderHtml()); }
+    else if (a === "b-m") { SH.touched = true; SH.items[+t.getAttribute("data-i")].m = t.value; rerenderSheet(builderHtml()); }
+    else if (a === "d-egg") { SH.egg = t.checked; rerenderSheet(dishHtml()); }
+  });
+  sheet.addEventListener("input", function (e) {
+    if (e.target.id !== "dishQ" || SH.kind !== "dish") return;
+    var hadQ = !!SH.q; SH.q = e.target.value; SH.pick = null;
+    if (hadQ !== !!SH.q) { rerenderSheet(dishHtml()); var qi = document.getElementById("dishQ"); qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
+    else document.getElementById("dishList").innerHTML = dishList();
   });
   view.addEventListener("change", function (e) {
     var t = e.target;

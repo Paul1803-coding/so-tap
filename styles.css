@@ -337,3 +337,17 @@ button.day { border: 0; background: transparent; padding: 0; }
 
 @media (prefers-reduced-motion: reduce) { .meter i, .macro .bar i, .progress .bar i { transition: none; } }
 @media (max-width: 380px) { .grid3 { grid-template-columns: 1fr; } .pick { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+
+/* Bản 2.4: ghép đĩa, chọn món */
+.bigbtn { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 14px 12px; text-align: left; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bigbtn b { font-family: var(--font-display); font-size: 20px; line-height: 1.1; }
+.bigbtn span { font-size: 12px; color: var(--muted); }
+.bigbtn:active { background: var(--surface-2); }
+.seg3 { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface-2); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg3 button { border: 0; background: transparent; padding: 8px 6px; border-radius: 8px; font-weight: 600; font-size: 13px; color: var(--muted); }
+.seg3 button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.seg2.wide { grid-template-columns: 1fr 1fr; }
+.stv { min-width: 40px; text-align: center; font-family: var(--font-display); font-size: 20px; }
+.bitem { display: flex; flex-direction: column; gap: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.btotal { position: sticky; bottom: calc(-24px - env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 2px solid var(--fg); padding: 12px 0 calc(4px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; }
+.sheet .results { max-height: 46vh; }
