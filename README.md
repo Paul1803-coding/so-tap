@@ -2,10 +2,10 @@
 
 App theo dõi tập gym và ăn uống cá nhân, dựng theo kế hoạch Recomp trong project "Xây dựng chế độ dinh dưỡng".
 
-- **Hôm nay:** calo và đạm, tinh bột, béo so với mục tiêu (2.150 kcal · 140g · 250g · 65g). Checklist các bữa theo ngày ăn mẫu: tick bữa nào là bữa đó tự ghi vào nhật ký ăn. Thêm 8.000 bước, ngủ 7 tiếng, cân nặng, vòng bụng.
+- **Hôm nay:** calo và đạm, tinh bột, béo so với mục tiêu (2.150 kcal · 140g · 250g · 65g), tóm tắt 4 bữa, 8.000 bước, ngủ 7 tiếng, cân nặng, vòng bụng.
 - **Hôm nay có gì khác kế hoạch?** Bận không tập, ăn lệch, lỡ giờ ăn, mệt/ngủ ít, thiếu thời gian. App gợi ý cách xử lý và tự chỉnh mục tiêu calo hôm nay và các ngày sau.
 - **Tập:** giáo án Upper A → Lower A → Upper B → Lower B. Ghi kg và rep từng hiệp, gợi ý tăng tạ theo tăng tiến kép, đồng hồ nghỉ, FST-7 từ tuần 5, giảm tải mỗi 8 tuần. Chọn số phút có được (75/60/45) để app rút gọn buổi tập: giữ compound, ghép superset, cắt bài cô lập. Có chế độ mệt và nút đổi bài sang máy khác.
-- **Ăn:** ghi bữa không cần biết gram. "Ghép đĩa cơm" ước lượng bằng nắm tay và lòng bàn tay (cơm, món mặn theo cách nấu, rau, canh). "Chọn món" có khoảng 80 món Việt với cỡ nhỏ, vừa, lớn và thêm trứng. Món hay ăn bấm một lần, tự nhập số liệu, chụp ảnh bữa ăn làm checkpoint.
+- **Ăn:** 4 thẻ bữa Sáng, Trưa, Tối, Phụ. Bữa chưa ghi có sẵn món bấm nhanh (bánh mì, xôi buổi sáng; "Cơm công ty" buổi trưa; món meal prep buổi tối; bữa sau tập, cà phê). Bấm món đã ghi để chỉnh khẩu phần ×0,5 đến ×2 hoặc xoá. "Gợi ý bữa tiếp theo" chia phần calo, đạm còn lại. Thêm món bằng một bảng: món có sẵn (khoảng 80 món Việt, cỡ nhỏ/vừa/lớn), ghép đĩa (ước lượng bằng nắm tay, lòng bàn tay, cách nấu) hoặc tự nhập.
 - **Thực đơn:** lịch meal prep 14 ngày, công thức, khẩu phần. Tick bữa tối ở đây cũng ghi vào nhật ký ăn.
 - **Tiến độ:** mục tiêu dài hạn (cân nặng, vòng bụng), lịch tháng và lịch năm, cân nặng trung bình 7 ngày, ảnh checkpoint cơ thể, calo 7 ngày, lịch sử buổi tập. App tự nhắc khi đến lúc điều chỉnh (2 tuần liền cả cân và vòng bụng không giảm).
 

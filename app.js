@@ -117,7 +117,7 @@
     { id: "buoc", t: "Đủ 8.000 bước", d: "Xem đếm bước trên điện thoại" },
     { id: "ngu", t: "Ngủ từ 7 tiếng", d: "Tính cho đêm qua" }
   ];
-  var HABIT_COUNT = PLAN_MEALS.length + OTHER_HABITS.length;
+  var HABIT_COUNT = 4 + OTHER_HABITS.length; // 4 bữa đã ghi + các thói quen
 
   // ---------- Bữa tối ----------
   var TYPES = {
@@ -306,7 +306,6 @@
   var COOK_SHORT = { luoc: "luộc", xao: "xào", kho: "kho", ran: "rán", quay: "quay" };
   var RICE = [195, 4, 43, 0.4];
   var SIZES = [["Nhỏ", 0.75], ["Vừa", 1], ["Lớn", 1.35]];
-  var SLOT_PLAN = { "Sáng": "sang", "Trưa": "trua", "Tối": "toi" };
 
   var SLOTS = ["Sáng", "Trưa", "Tối", "Phụ"];
 
@@ -598,9 +597,16 @@
   }
   function habitsDone(k) {
     var d = peekDay(k), n = 0;
-    PLAN_MEALS.forEach(function (m) { if (d.meals.some(function (x) { return x.q === m.id; })) n++; });
+    SLOTS.forEach(function (s) { if (d.meals.some(function (m) { return m.slot === s; })) n++; });
     OTHER_HABITS.forEach(function (h) { if (d.c[h.id]) n++; });
     return n;
+  }
+  function slotLogged(k, s) { return peekDay(k).meals.some(function (m) { return m.slot === s; }); }
+  // Ước lượng cho bữa chưa ghi: sáng/trưa theo bữa điển hình, tối theo thực đơn, phụ là bữa sau tập + G7
+  function typicalSlot(s, k) {
+    if (s === "Tối") { var b = boxFor(k); return { kcal: b.kcal, p: b.p }; }
+    if (s === "Phụ") return hasEvent(k, "busy") ? { kcal: 265, p: 22 } : { kcal: 440, p: 24.5 };
+    return s === "Sáng" ? { kcal: 430, p: 20 } : { kcal: 650, p: 35 };
   }
   function weighIns() {
     return Object.keys(S.days).filter(function (k) { return typeof S.days[k].w === "number"; }).sort().map(function (k) { return { k: k, w: S.days[k].w }; });
@@ -665,11 +671,11 @@
     h += '<div class="grid3">' + macro("Đạm", "--accent", s.p, t.p) + macro("Tinh bột", "--blue", s.c, t.c) + macro("Chất béo", "--fat", s.f, t.f) + "</div>";
     // Thiếu đạm: tính cả các bữa còn lại trong kế hoạch, chỉ nhắc khi vẫn hụt
     if (d.meals.length) {
-      var restP = PLAN_MEALS.filter(function (m) { return !hasPlanMeal(k, m.id); }).reduce(function (a, m) { return a + planMeal(m.id, k).p; }, 0);
+      var restP = SLOTS.filter(function (x) { return !slotLogged(k, x); }).reduce(function (a, x) { return a + typicalSlot(x, k).p; }, 0);
       var gap = Math.round(t.p - s.p - restP);
-      if (gap >= 12) h += '<p class="adj">Theo kế hoạch còn lại, hôm nay vẫn thiếu khoảng ' + gap + "g đạm. Thêm " + (gap >= 28 ? "100g ức gà hoặc thịt nạc (≈30g)" : gap >= 18 ? "3 lòng trắng + 1 trứng + 1 hộp sữa chua (≈20g)" : "2 trứng luộc (≈13g)") + ".</p>";
+      if (gap >= 12) h += '<p class="adj">Tính cả các bữa chưa ăn, hôm nay vẫn thiếu khoảng ' + gap + "g đạm. Thêm " + (gap >= 28 ? "100g ức gà hoặc thịt nạc (≈30g)" : gap >= 18 ? "3 lòng trắng + 1 trứng + 1 hộp sữa chua (≈20g)" : "2 trứng luộc (≈13g)") + ".</p>";
     }
-    if (withButton) h += '<button class="btn ghost sm" data-goto="food" style="align-self:flex-start">+ Thêm món ngoài kế hoạch</button>';
+    if (withButton) h += '<button class="btn ghost sm" data-goto="food" style="align-self:flex-start">Ghi bữa ăn →</button>';
     return h + "</div>";
   }
   var EVENT_LABEL = { busy: "Bận, không tập", offplan: "Ăn lệch kế hoạch", mealtime: "Lỡ giờ ăn", tired: "Mệt / ngủ ít", short: "Tập rút gọn" };
@@ -699,18 +705,18 @@
     if (d.events.length) h += '<p class="note">Đã ghi: ' + d.events.map(function (e) { return EVENT_LABEL[e.t] || e.t; }).join(" · ") + "</p>";
     h += "</div>";
 
-    // Checklist
-    h += '<div class="card"><div class="row between"><h2>Kế hoạch trong ngày</h2><span class="note num">' + habitsDone(k) + "/" + HABIT_COUNT + "</span></div><div>";
-    PLAN_MEALS.forEach(function (m0) {
-      var m = planMeal(m0.id, k), on = hasPlanMeal(k, m.id);
-      if (m.id === "phu" && hasEvent(k, "busy")) m = { id: "phu", t: "Bữa phụ tối (ngày nghỉ)", d: "3 trứng + 1 hộp sữa chua, bỏ chuối", kcal: 265, p: 22 };
-      h += '<button class="check' + (on ? " on" : "") + '" aria-pressed="' + on + '" data-act="plan" data-v="' + m.id + '">' + CHECK_SVG + '<span><span class="t">' + esc(m.t) + '</span><br><span class="d">' + esc(m.d) + '</span></span><span class="kc num">' + m.kcal + " kcal</span></button>";
+    // Tóm tắt trong ngày; ghi bữa chi tiết ở mục Ăn
+    h += '<div class="card"><div class="row between"><h2>Trong ngày</h2><span class="note num">' + habitsDone(k) + "/" + HABIT_COUNT + '</span></div><div class="slots4">';
+    SLOTS.forEach(function (s) {
+      var its = d.meals.filter(function (m) { return m.slot === s; });
+      h += '<button class="slotchip' + (its.length ? " on" : "") + '" data-goto="food"><span>' + s + '</span><b class="num">' + (its.length ? int(sum(its).kcal) : "–") + "</b></button>";
     });
+    h += "</div>";
     OTHER_HABITS.forEach(function (x) {
       var on = !!d.c[x.id];
       h += '<button class="check' + (on ? " on" : "") + '" aria-pressed="' + on + '" data-act="habit" data-v="' + x.id + '">' + CHECK_SVG + '<span><span class="t">' + x.t + '</span><br><span class="d">' + x.d + "</span></span></button>";
     });
-    h += '</div><p class="note">Ăn khác kế hoạch? Ghi bằng nút dưới đây, app sẽ thay bữa đó trong kế hoạch.</p><div class="row" style="gap:6px"><button class="btn ghost sm" data-act="open-build" data-r="1">🍚 Ăn cơm khác</button><button class="btn ghost sm" data-act="open-dish" data-r="1">🍜 Ăn món khác</button><button class="btn ghost sm" data-act="photo" data-kind="meal">📷 Ảnh</button></div></div>';
+    h += "</div>";
 
     // Workout
     h += '<div class="strip"><div class="cell"><span class="label">Tuần</span><span class="big num">' + w + '</span></div><div class="cell"><span class="label">Buổi tuần này</span><span class="big num">' + count + '<span class="muted" style="font-size:18px"> /' + G().weekly + '</span></span></div><div class="cell"><span class="label">Buổi kế tiếp</span><span class="big">' + PROGRAM[nk].name + "</span></div></div>";
@@ -875,57 +881,88 @@
   function vFood() {
     var k = UI.date, d = peekDay(k), h = dateBar();
     h += energyCard(k, false);
-    h += '<div class="card"><h2>Đã ăn</h2>';
-    if (!d.meals.length) h += '<p class="empty">Chưa ghi món nào. Tick các bữa trong kế hoạch ở mục Hôm nay, hoặc thêm bữa ăn bên dưới.</p>';
-    SLOTS.forEach(function (sl) {
-      var items = d.meals.filter(function (m) { return m.slot === sl; });
-      if (!items.length) return;
-      h += '<div class="slot">' + sl + '</div><div class="list">';
-      items.forEach(function (m) {
-        h += '<div class="item"><div class="t"><b>' + esc(m.name) + '</b><div class="s num">Đạm ' + fmt(m.p) + "g · Tinh bột " + fmt(m.c) + "g · Béo " + fmt(m.f) + 'g</div></div><span class="num">' + int(m.kcal) + '</span><button class="x" data-act="delmeal" data-v="' + esc(m.id) + '" aria-label="Xoá món">×</button></div>';
-      });
-      h += "</div>";
-    });
-    h += "</div>";
-
-    h += '<div class="card"><div class="row between"><h2>Ảnh bữa ăn</h2><button class="btn ghost sm" data-act="photo" data-kind="meal">📷 Chụp / chọn ảnh</button></div>';
+    h += suggestCard(k);
+    SLOTS.forEach(function (s) { h += mealCard(k, s); });
     var mp = d.photos.filter(function (p) { return p.kind === "meal"; });
-    h += mp.length ? photoGrid(mp) : '<p class="empty">Chụp lại bữa ăn làm checkpoint, sau này xem lại bạn đã ăn gì những ngày cân giảm hay đứng.</p>';
-    h += "</div>";
-
-    var slotSel = function (id) {
-      var def = defaultSlot();
-      return '<select id="' + id + '">' + SLOTS.map(function (s) { return "<option" + (s === def ? " selected" : "") + ">" + s + "</option>"; }).join("") + "</select>";
-    };
-    UI.recent = recentFoods();
-    if (UI.recent.length) {
-      h += '<div class="card"><h2>Hay ăn gần đây</h2><div class="sit">' + UI.recent.map(function (r, i) {
-        return '<button class="sit-btn" data-act="recent" data-v="' + i + '">+ ' + esc(r.name) + ' <span class="muted num">' + int(r.kcal) + "</span></button>";
-      }).join("") + '</div><p class="note">Bấm một lần là thêm vào bữa ' + defaultSlot().toLowerCase() + ".</p></div>";
-    }
-    h += '<div class="card"><h2>Thêm bữa ăn</h2><div class="grid2"><button class="bigbtn" data-act="open-build"><b>Ghép đĩa cơm</b><span>Cơm căng tin, cơm bụi, cơm nhà</span></button><button class="bigbtn" data-act="open-dish"><b>Chọn món</b><span>Phở, bún, bánh mì, xôi, đồ uống…</span></button></div><p class="note">Không cần biết gram: ước lượng bằng nắm tay, lòng bàn tay và cỡ nhỏ, vừa, lớn.</p></div>';
-    h += '<details class="card"><summary>Tự nhập số liệu</summary><label class="field">Tên món<input id="cName"></label><div class="grid2">';
-    h += '<label class="field">Calo (kcal)<input id="cK" inputmode="decimal"></label><label class="field">Đạm (g)<input id="cP" inputmode="decimal"></label>';
-    h += '<label class="field">Tinh bột (g)<input id="cC" inputmode="decimal"></label><label class="field">Chất béo (g)<input id="cF" inputmode="decimal"></label></div>';
-    h += '<label class="field">Bữa' + slotSel("slotC") + '</label><button class="btn dark" data-act="addcustom">Thêm</button></details>';
+    if (mp.length) h += '<div class="card"><h2>Ảnh bữa ăn</h2>' + photoGrid(mp) + "</div>";
     return h;
+  }
+  // Món bấm nhanh cho từng bữa, theo thói quen: sáng mua bánh mì/xôi, phụ là cà phê và đồ ăn nhẹ
+  var QUICK = { "Sáng": ["Bánh mì thịt / pate", "Xôi thịt, trứng", "Xôi mặn đầy đủ", "Bánh mì kẹp 2 trứng"], "Trưa": [], "Tối": [], "Phụ": ["Cà phê G7 3in1", "Sữa chua không đường", "Chuối", "Trứng gà"] };
+  function mealCard(k, s) {
+    var d = peekDay(k), its = d.meals.filter(function (m) { return m.slot === s; }), tot = sum(its), chips = [];
+    var h = '<div class="card meal"><div class="row between"><h2>' + s + '</h2><span class="row" style="gap:8px"><span class="num mk">' + (its.length ? int(tot.kcal) + " kcal" : "") + '</span><button class="icon sm" data-act="photo" data-kind="meal" data-slot="' + s + '" aria-label="Chụp ảnh bữa ' + s.toLowerCase() + '">📷</button></span></div>';
+    its.forEach(function (m) {
+      h += '<button class="mrow" data-act="editmeal" data-v="' + esc(m.id) + '"><span class="t"><b>' + esc(m.name) + '</b><span class="s num">Đạm ' + fmt(m.p) + " · TB " + fmt(m.c) + " · Béo " + fmt(m.f) + (m.mul && m.mul !== 1 ? " · ×" + fmt(m.mul) : "") + '</span></span><span class="num">' + int(m.kcal) + "</span></button>";
+    });
+    if (s === "Tối" && !hasPlanMeal(k, "toi")) { var bx = boxFor(k); chips.push('<button class="qchip plan" data-act="plan" data-v="toi">+ ' + esc(bx.name) + ' <span class="num">' + bx.kcal + "</span></button>"); }
+    if (s === "Phụ" && !hasPlanMeal(k, "phu")) chips.push('<button class="qchip plan" data-act="plan" data-v="phu">+ Bữa sau tập <span class="num">' + (hasEvent(k, "busy") ? 265 : 370) + "</span></button>");
+    if (s === "Trưa" && !its.length) chips.push('<button class="qchip plan" data-act="addsheet" data-slot="Trưa" data-tab="build">🍚 Cơm công ty</button>');
+    // Bữa đã ghi thì chỉ giữ một nút thêm, cho gọn
+    if (its.length) { chips.push('<button class="qchip more" data-act="addsheet" data-slot="' + s + '">+ Thêm món</button>'); return h + '<div class="qchips">' + chips.join("") + "</div></div>"; }
+    QUICK[s].forEach(function (n) { var f = foodByName(n); chips.push('<button class="qchip" data-act="qadd" data-slot="' + s + '" data-v="' + esc(n) + '">+ ' + esc(n.split(" / ")[0]) + ' <span class="num">' + f[3] + "</span></button>"); });
+    UI.rec = UI.rec || {}; UI.rec[s] = recentBySlot(s);
+    UI.rec[s].forEach(function (r, i) { chips.push('<button class="qchip" data-act="qrecent" data-slot="' + s + '" data-v="' + i + '">↺ ' + esc(r.name.length > 34 ? r.name.slice(0, 32) + "…" : r.name) + ' <span class="num">' + int(r.kcal) + "</span></button>"); });
+    chips.push('<button class="qchip more" data-act="addsheet" data-slot="' + s + '">+ Món khác</button>');
+    return h + '<div class="qchips">' + chips.join("") + "</div></div>";
+  }
+  // Gợi ý bữa tiếp theo: chia phần calo, đạm còn lại sau khi chừa cho các bữa sau
+  function suggestCard(k) {
+    if (k !== todayKey()) return "";
+    var hr = new Date().getHours(), next = null;
+    SLOTS.some(function (s) {
+      if (slotLogged(k, s)) return false;
+      if ((s === "Sáng" && hr >= 11) || (s === "Trưa" && hr >= 16)) return false;
+      next = s; return true;
+    });
+    if (!next) return "";
+    var t = targetFor(k), eaten = sum(peekDay(k).meals), later = SLOTS.slice(SLOTS.indexOf(next) + 1).filter(function (s) { return !slotLogged(k, s); });
+    var res = later.reduce(function (a, s) { var x = typicalSlot(s, k); return { kcal: a.kcal + x.kcal, p: a.p + x.p }; }, { kcal: 0, p: 0 });
+    var bk = Math.round(t.kcal - eaten.kcal - res.kcal), bp = Math.max(0, Math.round(t.p - eaten.p - res.p)), half = function (x) { return Math.round(x * 2) / 2; };
+    var h = '<div class="card suggest"><div class="row between"><h2>Gợi ý bữa ' + next.toLowerCase() + '</h2><span class="note num">≈ ' + int(Math.max(0, bk)) + " kcal · " + bp + "g đạm</span></div>";
+    UI.sug = null;
+    if (bk < 150 && next !== "Phụ") {
+      h += "<p>Hôm nay gần hết calo. Bữa " + next.toLowerCase() + " ăn nhẹ: <b>thịt nạc hoặc trứng + rau, bỏ cơm</b>.</p>";
+    } else if (next === "Sáng") {
+      var opts = FOODS.filter(function (f) { return f[0] === "Bữa sáng" && f[3] >= 200 && f[3] <= bk + 60; }).sort(function (a, b) { return b[4] / b[3] - a[4] / a[3]; }).slice(0, 3);
+      h += '<div class="qchips">' + opts.map(function (f) { return '<button class="qchip" data-act="qadd" data-slot="Sáng" data-v="' + esc(f[1]) + '">+ ' + esc(f[1].split(" / ")[0]) + ' <span class="num">' + f[3] + " · " + f[4] + "g</span></button>"; }).join("") + "</div>";
+      if (opts.length && opts[0][4] < bp - 8) h += '<p class="note">Thêm 1 trứng hoặc 1 hộp sữa tươi để đủ đạm.</p>';
+    } else if (next === "Tối" && DAY_BY_DATE[k] && DAY_BY_DATE[k].box) {
+      var bx = boxFor(k), diff = bk - bx.kcal;
+      h += "<p>Ăn <b>" + esc(bx.name) + "</b> (" + bx.kcal + " kcal, " + bx.p + "g đạm)." + (diff < -150 ? " Hôm nay đã ăn hơi nhiều: <b>bớt " + fmt(Math.min(1, Math.max(0.5, half(-diff / 195)))) + " nắm cơm</b> trong hộp." : diff > 200 ? " Còn dư: thêm ½ nắm cơm hoặc 1 quả chuối trước tập." : "") + "</p>";
+      if (!hasPlanMeal(k, "toi")) h += '<div class="qchips"><button class="qchip plan" data-act="plan" data-v="toi">+ Ghi bữa tối này</button></div>';
+    } else if (next === "Phụ") {
+      if (bk < 200) h += "<p>Gần đủ calo: chỉ ăn <b>3 trứng + 1 hộp sữa chua</b>, bỏ chuối.</p>";
+      else h += "<p><b>3 trứng + 1 hộp sữa chua + 1 quả chuối</b> sau tập (370 kcal, 24g đạm).</p>";
+      if (!hasPlanMeal(k, "phu")) h += '<div class="qchips"><button class="qchip plan" data-act="plan" data-v="phu">+ Ghi bữa sau tập</button></div>';
+    } else {
+      // Mỗi phần thịt ≈ 27g đạm; chia 30 để chừa đạm từ cơm, rau, canh và giữ đủ cơm cho ngày tập
+      var prot = Math.min(2.5, Math.max(1, half(bp / 30))), rice = Math.min(2.5, Math.max(0.5, half((bk - prot * 230 - 70) / 195)));
+      UI.sug = { slot: next, rice: rice, items: [{ t: "lonnac", m: "kho", n: prot }], veg: 1, vm: "luoc", soup: 1 };
+      var r = builderCalc(UI.sug);
+      h += "<p><b>" + fmt(rice) + " nắm cơm + " + fmt(prot) + " phần thịt nạc, gà hoặc cá + rau + canh</b> ≈ " + int(r.kcal) + " kcal, " + r.p + 'g đạm.</p><p class="note">Ở căng tin chọn món luộc, kho, hấp. Tránh món rán, ba chỉ, da gà.</p><div class="qchips"><button class="qchip plan" data-act="suggest-log">+ Ghi đĩa này</button><button class="qchip" data-act="addsheet" data-slot="' + next + '" data-tab="build">Chỉnh rồi ghi</button></div>';
+    }
+    return h + "</div>";
   }
   function photoGrid(list) {
     return '<div class="phgrid">' + list.map(function (p) {
       return '<button class="ph" data-act="viewphoto" data-v="' + esc(p.id) + '"><img data-ph="' + esc(p.id) + '" alt="Ảnh ' + esc(p.slot || p.kind) + '"><span>' + esc(p.label || p.slot || "") + "</span></button>";
     }).join("") + "</div>";
   }
-  // Món ngoài kế hoạch đã ghi trong 30 ngày, xếp theo số lần ăn rồi độ gần đây
-  function recentFoods() {
-    var map = {}, t = todayKey(), from = shiftKey(t, -30);
+  // Món đã ghi ở bữa này trong 30 ngày (trừ món kế hoạch và món bấm nhanh), xếp theo số lần ăn
+  function recentBySlot(slot) {
+    var map = {}, t = todayKey(), from = shiftKey(t, -30), skip = {};
+    (QUICK[slot] || []).forEach(function (n) { skip[norm(n)] = 1; });
     Object.keys(S.days).filter(function (k) { return k >= from && k <= t; }).sort().forEach(function (k) {
       (S.days[k].meals || []).forEach(function (m) {
-        if (m.q || !m.name) return;
-        var key = norm(m.name), r = map[key] || (map[key] = { name: m.name, n: 0, last: "" });
-        r.n++; r.last = k; r.kcal = m.kcal; r.p = m.p; r.c = m.c; r.f = m.f;
+        if (m.q || !m.name || m.slot !== slot) return;
+        var b = m.base || m, key = norm(m.name);
+        if (skip[key] || skip[norm(m.name.replace(/ \(.*$/, ""))]) return;
+        var r = map[key] || (map[key] = { name: m.name, n: 0, last: "" });
+        r.n++; r.last = k; r.kcal = b.kcal; r.p = b.p; r.c = b.c; r.f = b.f;
       });
     });
-    return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.n - a.n || (b.last > a.last ? 1 : -1); }).slice(0, 8);
+    return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.n - a.n || (b.last > a.last ? 1 : -1); }).slice(0, 4);
   }
   function defaultSlot() { var hr = new Date().getHours(); return hr < 10 ? "Sáng" : hr < 15 ? "Trưa" : hr < 21 ? "Tối" : "Phụ"; }
 
@@ -1230,7 +1267,7 @@
   }
   function offplanResult() {
     var k = SH.k, extra = +SH.extra || 0, t = targetFor(k), eaten = sum(peekDay(k).meals).kcal + extra;
-    var rest = PLAN_MEALS.filter(function (m) { return !hasPlanMeal(k, m.id); }).map(function (m) { return planMeal(m.id, k); });
+    var rest = SLOTS.filter(function (x) { return !slotLogged(k, x); }).map(function (x) { return typicalSlot(x, k); });
     var projected = eaten + rest.reduce(function (a, m) { return a + m.kcal; }, 0), over = Math.round(projected - t.kcal), h = "";
     h += '<div class="card"><h2>Tính toán</h2><p class="num">Đã ăn ' + int(eaten) + " + phần còn lại theo kế hoạch " + int(projected - eaten) + " = <b>" + int(projected) + " kcal</b> (mục tiêu " + int(t.kcal) + ").</p>";
     if (over <= 100) {
@@ -1238,9 +1275,8 @@
       SH.plan = { today: [], perDay: 0, days: 0 };
     } else {
       var fixes = [], cutToday = 0, box = boxFor(k);
-      if (!hasPlanMeal(k, "toi")) { var rc = Math.round(box.riceG * 1.3); fixes.push("Bữa tối <b>bỏ cơm</b>, giữ thịt và rau (−" + rc + " kcal)"); cutToday += rc; }
-      if (!hasPlanMeal(k, "phu")) { fixes.push("Bữa sau tập <b>bỏ chuối</b> (−105 kcal)"); cutToday += 105; }
-      if (!hasPlanMeal(k, "g7")) { fixes.push("<b>Bỏ G7</b> hôm nay (−70 kcal)"); cutToday += 70; }
+      if (!slotLogged(k, "Tối")) { var rc = Math.round(box.riceG * 1.3); fixes.push("Bữa tối <b>bỏ cơm</b>, giữ thịt và rau (−" + rc + " kcal)"); cutToday += rc; }
+      if (!slotLogged(k, "Phụ")) { fixes.push("Bữa sau tập <b>bỏ chuối</b> (−105 kcal), <b>bỏ G7</b> (−70 kcal)"); cutToday += 175; }
       cutToday = Math.min(cutToday, over);
       var remain = over - cutToday, days = remain > 0 ? Math.min(3, Math.ceil(remain / 250)) : 0, perDay = days ? Math.min(300, Math.round(remain / days / 10) * 10) : 0, leftover = Math.max(0, remain - perDay * days);
       h += '<p>Dư khoảng <b>' + int(over) + " kcal</b>.</p></div>";
@@ -1256,7 +1292,7 @@
     return h;
   }
 
-  // ---------- Ghép đĩa cơm ----------
+  // ---------- Thêm món: một bảng, ba cách ----------
   function rerenderSheet(html) { var st = sheetBody.scrollTop; sheetBody.innerHTML = html; sheetBody.scrollTop = st; }
   function slotSeg(act, cur) {
     return '<div class="seg4">' + SLOTS.map(function (s) { return '<button aria-pressed="' + (s === cur) + '" data-act="' + act + '" data-v="' + s + '">' + s + "</button>"; }).join("") + "</div>";
@@ -1265,15 +1301,22 @@
     var di = i == null ? "" : ' data-i="' + i + '"';
     return '<span class="step"><button data-act="b-step" data-f="' + f + '"' + di + ' data-d="-1" aria-label="Bớt">−</button><b class="num stv">' + fmt(val) + '</b><button data-act="b-step" data-f="' + f + '"' + di + ' data-d="1" aria-label="Thêm">+</button></span>';
   }
-  // Đĩa mặc định theo bữa: sáng là cơm trứng, trưa/tối là đĩa căng tin điển hình
   function builderDefaults(slot) {
     if (slot === "Sáng" || slot === "Phụ") return { rice: 1, items: [{ t: "trung", m: "ran", n: 1 }], veg: 0, vm: "luoc", soup: 0 };
     return { rice: 1, items: [{ t: "lonnac", m: "kho", n: 1 }, { t: "ga", m: "xao", n: 1 }], veg: 1, vm: "luoc", soup: 1 };
   }
-  function openBuilder(replace) {
-    var slot = defaultSlot();
-    SH = Object.assign({ kind: "build", replace: replace, slot: slot, touched: false }, builderDefaults(slot));
-    openSheet(builderHtml());
+  function openAdd(slot, tab, preset) {
+    SH = Object.assign({ kind: "add", slot: slot, tab: tab || "dish", q: "", cat: slot === "Sáng" ? "Bữa sáng" : slot === "Phụ" ? "Ăn vặt, đồ uống" : slot === "Trưa" ? "Cơm" : "Bún, phở, mì", pick: null, size: 1, egg: false, qty: 1 }, builderDefaults(slot), preset || {});
+    openSheet(addHtml());
+  }
+  function addHtml() {
+    var h = sheetHead("Thêm vào bữa " + SH.slot.toLowerCase());
+    h += '<div class="seg3">' + [["dish", "Món có sẵn"], ["build", "Ghép đĩa"], ["custom", "Tự nhập"]].map(function (x) { return '<button aria-pressed="' + (SH.tab === x[0]) + '" data-act="add-tab" data-v="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div>";
+    return h + (SH.tab === "build" ? builderBody() : SH.tab === "custom" ? customBody() : dishBody());
+  }
+  function refreshAdd() { rerenderSheet(addHtml()); }
+  function totalBar(r, act) {
+    return '<div class="btotal"><div class="row between" style="align-items:flex-end"><div><span class="huge num">' + int(r.kcal) + '</span> <span class="note">kcal</span></div><span class="note num">Đạm ' + r.p + "g · TB " + r.c + "g · Béo " + r.f + 'g</span></div><button class="btn" data-act="' + act + '">Thêm vào bữa ' + SH.slot.toLowerCase() + "</button></div>";
   }
   function builderCalc(st) {
     var k = st.rice * RICE[0], p = st.rice * RICE[1], c = st.rice * RICE[2], f = st.rice * RICE[3], parts = [];
@@ -1288,27 +1331,18 @@
     if (st.soup === 2) { k += 80; p += 6; c += 4; f += 4.5; parts.push("canh thịt"); }
     return { kcal: Math.round(k), p: Math.round(p), c: Math.round(c), f: Math.round(f), name: (st.slot === "Trưa" || st.slot === "Tối" ? "Cơm " + st.slot.toLowerCase() : "Đĩa cơm") + ": " + parts.join(", ") };
   }
-  function builderHtml() {
-    var st = SH, r = builderCalc(st), h = sheetHead("Ghép đĩa cơm");
-    h += '<p class="note">Nhìn đĩa rồi chọn, không cần cân.' + (st.replace && SLOT_PLAN[st.slot] ? " Bữa " + st.slot.toLowerCase() + " trong kế hoạch sẽ được thay bằng đĩa này." : "") + "</p>";
-    h += slotSeg("b-slot", st.slot);
-    h += '<div class="card"><div class="row between"><h2>Cơm</h2>' + stepper("rice", st.rice) + '</div><p class="note">1 nắm tay ≈ 1 chén cơm vừa ≈ 150g. Đĩa cơm bụi thường 1,5–2 nắm.</p></div>';
-    h += '<div class="card"><h2>Món mặn</h2>';
+  function builderBody() {
+    var st = SH, h = "";
+    h += '<div class="brow"><div><b>Cơm</b><span class="note">1 nắm tay ≈ 1 chén</span></div>' + stepper("rice", st.rice) + "</div>";
+    h += '<div class="brow head"><b>Món mặn</b><span class="note">1 phần ≈ lòng bàn tay</span></div>';
     st.items.forEach(function (it, i) {
-      h += '<div class="bitem"><div class="grid2"><select data-act="b-t" data-i="' + i + '" aria-label="Loại thịt">' + Object.keys(PROT).map(function (k) { return '<option value="' + k + '"' + (k === it.t ? " selected" : "") + ">" + PROT[k][0] + "</option>"; }).join("") + '</select><select data-act="b-m" data-i="' + i + '" aria-label="Cách nấu">' + Object.keys(COOK).map(function (k) { return '<option value="' + k + '"' + (k === it.m ? " selected" : "") + ">" + COOK[k][0] + "</option>"; }).join("") + '</select></div><div class="row between"><span class="note">Số phần</span><span class="row" style="gap:6px">' + stepper("item", it.n, i) + '<button class="x" data-act="b-del" data-i="' + i + '" aria-label="Bỏ món">×</button></span></div></div>';
+      h += '<div class="bitem"><div class="grid2"><select data-act="b-t" data-i="' + i + '" aria-label="Loại thịt">' + Object.keys(PROT).map(function (k) { return '<option value="' + k + '"' + (k === it.t ? " selected" : "") + ">" + PROT[k][0] + "</option>"; }).join("") + '</select><select data-act="b-m" data-i="' + i + '" aria-label="Cách nấu">' + Object.keys(COOK).map(function (k) { return '<option value="' + k + '"' + (k === it.m ? " selected" : "") + ">" + COOK[k][0] + "</option>"; }).join("") + '</select></div><div class="row between"><button class="x" data-act="b-del" data-i="' + i + '" aria-label="Bỏ món">× Bỏ</button>' + stepper("item", it.n, i) + "</div></div>";
     });
     if (st.items.length < 4) h += '<button class="btn ghost sm" data-act="b-additem" style="align-self:flex-start">+ Thêm món mặn</button>';
-    h += '<p class="note">1 phần = cỡ lòng bàn tay, dày bằng bàn tay (≈100g thịt chín). Trứng: 1 phần = 2 quả. Món rán, xào, kho tính thêm dầu mỡ.</p></div>';
-    h += '<div class="card"><div class="row between"><h2>Rau</h2>' + stepper("veg", st.veg) + '</div><div class="seg2 wide"><button aria-pressed="' + (st.vm === "luoc") + '" data-act="b-vm" data-v="luoc">Luộc</button><button aria-pressed="' + (st.vm === "xao") + '" data-act="b-vm" data-v="xao">Xào</button></div><p class="note">1 phần ≈ nửa đĩa rau hoặc 1 bát.</p></div>';
-    h += '<div class="card"><h2>Canh</h2><div class="seg3">' + [["0", "Không"], ["1", "Canh rau"], ["2", "Canh thịt, xương"]].map(function (x) { return '<button aria-pressed="' + (st.soup === +x[0]) + '" data-act="b-soup" data-v="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div></div>";
-    h += '<div class="btotal"><div class="row between" style="align-items:flex-end"><div><span class="huge num">' + int(r.kcal) + '</span> <span class="note">kcal</span></div><span class="note num">Đạm ' + r.p + "g · TB " + r.c + "g · Béo " + r.f + 'g</span></div><button class="btn" data-act="b-save">Thêm vào bữa ' + st.slot.toLowerCase() + "</button></div>";
-    return h;
-  }
-
-  // ---------- Chọn món có sẵn ----------
-  function openDish(replace) {
-    SH = { kind: "dish", replace: replace, slot: defaultSlot(), cat: defaultSlot() === "Sáng" ? "Bữa sáng" : "Cơm", q: "", pick: null, size: 1, egg: false, qty: 1 };
-    openSheet(dishHtml());
+    h += '<div class="brow"><div><b>Rau</b><span class="note">1 phần ≈ nửa đĩa</span></div>' + stepper("veg", st.veg) + "</div>";
+    if (st.veg) h += '<div class="seg2 wide"><button aria-pressed="' + (st.vm === "luoc") + '" data-act="b-vm" data-v="luoc">Rau luộc</button><button aria-pressed="' + (st.vm === "xao") + '" data-act="b-vm" data-v="xao">Rau xào</button></div>';
+    h += '<div class="seg3">' + [["0", "Không canh"], ["1", "Canh rau"], ["2", "Canh thịt"]].map(function (x) { return '<button aria-pressed="' + (st.soup === +x[0]) + '" data-act="b-soup" data-v="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div>";
+    return h + totalBar(builderCalc(st), "b-save");
   }
   function dishList() {
     var q = norm(SH.q.trim()), out = [];
@@ -1327,7 +1361,7 @@
       var best = scored.length ? Math.min.apply(null, scored.map(function (x) { return x[0]; })) : 9;
       scored.filter(function (x) { return best > 0 || x[0] <= 1; }).sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; }).forEach(function (x) { out.push(x[1]); });
     }
-    if (!out.length) return '<p class="empty" style="padding:10px 12px">Không thấy món này. Thử "Ghép đĩa cơm" hoặc tự nhập ở mục Ăn.</p>';
+    if (!out.length) return '<p class="empty" style="padding:10px 12px">Không thấy món này. Thử "Ghép đĩa" hoặc "Tự nhập".</p>';
     return out.map(function (i) { var f = FOODS[i]; return '<button class="' + (SH.pick === i ? "sel" : "") + '" data-act="d-pick" data-v="' + i + '"><span><b>' + esc(f[1]) + '</b> <span class="p">' + esc(f[2]) + '</span></span><span class="num">' + f[3] + "</span></button>"; }).join("");
   }
   function dishCalc() {
@@ -1335,29 +1369,41 @@
     return { kcal: Math.round(f[3] * m + 72 * e), p: Math.round(f[4] * m + 6.3 * e), c: Math.round(f[5] * m + 0.4 * e), f: Math.round(f[6] * m + 4.8 * e),
       name: (SH.qty !== 1 ? fmt(SH.qty) + " × " : "") + f[1] + (SH.size !== 1 ? " (cỡ " + SIZES[SH.size][0].toLowerCase() + ")" : "") + (SH.egg ? " + trứng" : "") };
   }
-  function dishHtml() {
-    var h = sheetHead("Chọn món");
-    if (SH.replace && SLOT_PLAN[SH.slot]) h += '<p class="note">Bữa ' + SH.slot.toLowerCase() + " trong kế hoạch sẽ được thay bằng món này.</p>";
-    h += slotSeg("d-slot", SH.slot);
-    h += '<input id="dishQ" placeholder="Tìm món: phở, xôi, bánh mì…" value="' + esc(SH.q) + '" autocomplete="off" aria-label="Tìm món">';
+  function dishBody() {
+    var h = '<input id="dishQ" placeholder="Tìm món, gõ không dấu cũng được" value="' + esc(SH.q) + '" autocomplete="off" aria-label="Tìm món">';
     if (!SH.q) h += '<div class="sit">' + FOOD_CATS.map(function (c) { return '<button class="sit-btn' + (c === SH.cat ? " on" : "") + '" data-act="d-cat" data-v="' + c + '">' + c + "</button>"; }).join("") + "</div>";
     h += '<div class="results" id="dishList">' + dishList() + "</div>";
     if (SH.pick != null) {
-      var r = dishCalc();
-      h += '<div class="btotal"><p><b>' + esc(FOODS[SH.pick][1]) + '</b> <span class="note">' + esc(FOODS[SH.pick][2]) + "</span></p>";
       h += '<div class="seg3">' + SIZES.map(function (z, i) { return '<button aria-pressed="' + (SH.size === i) + '" data-act="d-size" data-v="' + i + '">' + z[0] + "</button>"; }).join("") + "</div>";
-      h += '<div class="row between"><label class="toggle"><input type="checkbox" data-act="d-egg"' + (SH.egg ? " checked" : "") + '><span>+ 1 trứng</span></label><span class="row" style="gap:6px"><span class="note">Số lượng</span>' + stepper("qty", SH.qty) + "</span></div>";
-      h += '<div class="row between" style="align-items:flex-end"><div><span class="huge num">' + int(r.kcal) + '</span> <span class="note">kcal</span></div><span class="note num">Đạm ' + r.p + "g · TB " + r.c + "g · Béo " + r.f + 'g</span></div><button class="btn" data-act="d-save">Thêm vào bữa ' + SH.slot.toLowerCase() + "</button></div>";
-    } else h += '<p class="note">Cỡ "vừa" là suất bình thường ở quán. Tô to, gọi đặc biệt thì chọn "lớn".</p>';
+      h += '<div class="row between"><label class="toggle"><input type="checkbox" data-act="d-egg"' + (SH.egg ? " checked" : "") + '><span>+ 1 trứng</span></label>' + stepper("qty", SH.qty) + "</div>";
+      h += totalBar(dishCalc(), "d-save");
+    }
     return h;
   }
+  function customBody() {
+    return '<label class="field">Tên món<input id="cName" autocomplete="off"></label><div class="grid2"><label class="field">Calo (kcal)<input id="cK" inputmode="decimal"></label><label class="field">Đạm (g)<input id="cP" inputmode="decimal"></label><label class="field">Tinh bột (g)<input id="cC" inputmode="decimal"></label><label class="field">Chất béo (g)<input id="cF" inputmode="decimal"></label></div><p class="note">Dùng khi đồ ăn có ghi số trên bao bì.</p><button class="btn" data-act="c-save">Thêm vào bữa ' + SH.slot.toLowerCase() + "</button>";
+  }
+  function pushMeal(k, slot, r) {
+    var base = { kcal: r.kcal, p: r.p, c: r.c, f: r.f };
+    day(k).meals.push({ id: uid(), slot: slot, name: r.name, kcal: r.kcal, p: r.p, c: r.c, f: r.f, base: base, mul: 1 });
+  }
   function saveSheetMeal(r) {
-    var k = UI.date, d = day(k), planId = SH.replace ? SLOT_PLAN[SH.slot] : null, removed = false;
-    if (planId) d.meals = d.meals.filter(function (m) { if (m.q === planId) { removed = true; return false; } return true; });
-    d.meals.push({ id: uid(), slot: SH.slot, name: r.name, kcal: r.kcal, p: r.p, c: r.c, f: r.f });
     var slot = SH.slot;
+    pushMeal(UI.date, slot, r);
     flush(); closeSheet(); render();
-    toast("Đã thêm vào bữa " + slot.toLowerCase() + ": " + int(r.kcal) + " kcal" + (removed ? ", thay cho bữa trong kế hoạch" : ""));
+    toast("Đã thêm vào bữa " + slot.toLowerCase() + ": " + int(r.kcal) + " kcal");
+  }
+
+  // ---------- Sửa món đã ghi ----------
+  var MULS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  function findMeal(id) { return day(UI.date).meals.filter(function (m) { return m.id === id; })[0]; }
+  function openEditMeal(id) { if (!findMeal(id)) return; SH = { kind: "edit", id: id }; openSheet(editHtml()); }
+  function editHtml() {
+    var m = findMeal(SH.id), mul = m.mul || 1, h = sheetHead("Sửa món");
+    h += "<p><b>" + esc(m.name) + "</b></p>";
+    h += '<div class="card"><h2>Ăn nhiều hay ít hơn lúc ghi?</h2><div class="seg6">' + MULS.map(function (x) { return '<button aria-pressed="' + (x === mul) + '" data-act="em-mul" data-v="' + x + '">×' + fmt(x) + "</button>"; }).join("") + '</div><div class="row between" style="align-items:flex-end"><div><span class="huge num">' + int(m.kcal) + '</span> <span class="note">kcal</span></div><span class="note num">Đạm ' + fmt(m.p) + "g · TB " + fmt(m.c) + "g · Béo " + fmt(m.f) + "g</span></div></div>";
+    h += '<div class="card"><h2>Bữa</h2>' + slotSeg("em-slot", m.slot) + "</div>";
+    return h + '<button class="btn ghost" data-act="em-del">Xoá món này</button>';
   }
 
   function openSwap(slotId) {
@@ -1385,7 +1431,7 @@
     h += '<div class="card"><h2>Nhập dữ liệu bằng mã</h2><p class="note">Dán mã bắt đầu bằng SOTAP1: (Claude gửi trong chat). Dữ liệu được gộp thêm, không xoá những gì đã có.</p><textarea id="pasteCode" rows="3" placeholder="SOTAP1:..." autocomplete="off" autocapitalize="off" spellcheck="false"></textarea><button class="btn dark" data-act="paste-import">Nhập</button></div>';
     h += '<div class="card"><h2>Cài app lên điện thoại</h2><ul class="plain"><li><b>iPhone:</b> mở bằng Safari → nút Chia sẻ → "Thêm vào MH chính".</li><li><b>Android:</b> mở bằng Chrome → menu ⋮ → "Cài đặt ứng dụng".</li></ul></div>';
     h += '<div class="card"><h2>Xoá toàn bộ</h2><p class="note">Xoá mọi buổi tập, món ăn, số đo và ảnh trên máy này.</p><button class="btn ghost" data-act="wipe">Xoá toàn bộ dữ liệu</button></div>';
-    h += '<p class="note" style="text-align:center">FitCore · bản 2.4</p>';
+    h += '<p class="note" style="text-align:center">FitCore · bản 2.5</p>';
     SH = { kind: "settings" };
     openSheet(h);
   }
@@ -1401,8 +1447,8 @@
 
   // ---------- Chụp ảnh ----------
   var photoIn = document.getElementById("photoIn"), photoCtx = null;
-  function askPhoto(kind) {
-    photoCtx = { kind: kind, date: UI.date, slot: kind === "meal" ? defaultSlot() : null };
+  function askPhoto(kind, slot) {
+    photoCtx = { kind: kind, date: UI.date, slot: kind === "meal" ? (slot || defaultSlot()) : null };
     photoIn.value = "";
     photoIn.click();
   }
@@ -1601,32 +1647,39 @@
       else { addEvent(k, "tired"); dr.tired = true; toast("Buổi " + PROGRAM[key].name + " sẽ nhẹ hơn hôm nay"); }
       flush(); closeSheet(); render();
     }
-    else if (a === "b-slot" || a === "d-slot") {
-      SH.slot = v;
-      if (SH.kind === "build" && !SH.touched) Object.assign(SH, builderDefaults(v));
-      rerenderSheet(SH.kind === "build" ? builderHtml() : dishHtml());
-    }
-    else if (/^b-(step|additem|del|vm|soup)$/.test(a) && SH.kind === "build" && (SH.touched = true) && false) {}
+    else if (a === "add-tab") { SH.tab = v; refreshAdd(); }
     else if (a === "b-step") {
       var f = b.getAttribute("data-f"), dl = +b.getAttribute("data-d") * 0.5, bi = +b.getAttribute("data-i");
       if (f === "rice") SH.rice = Math.max(0, Math.min(4, SH.rice + dl));
       else if (f === "veg") SH.veg = Math.max(0, Math.min(3, SH.veg + dl));
       else if (f === "item") SH.items[bi].n = Math.max(0.5, Math.min(4, SH.items[bi].n + dl));
       else if (f === "qty") SH.qty = Math.max(0.5, Math.min(5, SH.qty + dl));
-      rerenderSheet(SH.kind === "build" ? builderHtml() : dishHtml());
+      refreshAdd();
     }
-    else if (a === "b-additem") { SH.items.push({ t: "ga", m: "luoc", n: 1 }); rerenderSheet(builderHtml()); }
-    else if (a === "b-del") { SH.items.splice(+b.getAttribute("data-i"), 1); rerenderSheet(builderHtml()); }
-    else if (a === "b-vm") { SH.vm = v; rerenderSheet(builderHtml()); }
-    else if (a === "b-soup") { SH.soup = +v; rerenderSheet(builderHtml()); }
+    else if (a === "b-additem") { SH.items.push({ t: "ga", m: "luoc", n: 1 }); refreshAdd(); }
+    else if (a === "b-del") { SH.items.splice(+b.getAttribute("data-i"), 1); refreshAdd(); }
+    else if (a === "b-vm") { SH.vm = v; refreshAdd(); }
+    else if (a === "b-soup") { SH.soup = +v; refreshAdd(); }
     else if (a === "b-save") {
       if (!SH.rice && !SH.items.length && !SH.veg) { toast("Đĩa đang trống, thêm cơm hoặc món mặn"); return; }
       saveSheetMeal(builderCalc(SH));
     }
-    else if (a === "d-cat") { SH.cat = v; SH.pick = null; rerenderSheet(dishHtml()); }
-    else if (a === "d-pick") { SH.pick = +v; SH.size = 1; SH.egg = false; SH.qty = 1; rerenderSheet(dishHtml()); var bt = sheetBody.querySelector(".btotal"); if (bt) bt.scrollIntoView({ block: "nearest" }); }
-    else if (a === "d-size") { SH.size = +v; rerenderSheet(dishHtml()); }
+    else if (a === "d-cat") { SH.cat = v; SH.pick = null; refreshAdd(); }
+    else if (a === "d-pick") { SH.pick = +v; SH.size = 1; SH.egg = false; SH.qty = 1; refreshAdd(); var bt = sheetBody.querySelector(".btotal"); if (bt) bt.scrollIntoView({ block: "nearest" }); }
+    else if (a === "d-size") { SH.size = +v; refreshAdd(); }
     else if (a === "d-save") { if (SH.pick != null) saveSheetMeal(dishCalc()); }
+    else if (a === "c-save") {
+      var cn = document.getElementById("cName").value.trim(), ck = num(document.getElementById("cK").value);
+      if (!cn || ck == null || ck < 0) { toast("Cần nhập tên món và số calo"); return; }
+      saveSheetMeal({ name: cn, kcal: Math.round(ck), p: num(document.getElementById("cP").value) || 0, c: num(document.getElementById("cC").value) || 0, f: num(document.getElementById("cF").value) || 0 });
+    }
+    else if (a === "em-mul") {
+      var m = findMeal(SH.id), x = +v, base = m.base || { kcal: m.kcal / (m.mul || 1), p: m.p / (m.mul || 1), c: m.c / (m.mul || 1), f: m.f / (m.mul || 1) };
+      m.base = base; m.mul = x; m.kcal = Math.round(base.kcal * x); m.p = Math.round(base.p * x * 10) / 10; m.c = Math.round(base.c * x * 10) / 10; m.f = Math.round(base.f * x * 10) / 10;
+      flush(); render(); rerenderSheet(editHtml());
+    }
+    else if (a === "em-slot") { findMeal(SH.id).slot = v; flush(); render(); rerenderSheet(editHtml()); }
+    else if (a === "em-del") { var dd2 = day(UI.date); dd2.meals = dd2.meals.filter(function (mm) { return mm.id !== SH.id; }); flush(); closeSheet(); render(); toast("Đã xoá món"); }
     else if (a === "do-swap") {
       var slotId = b.getAttribute("data-slot");
       if (v === slotId) delete S.swaps[slotId]; else S.swaps[slotId] = v;
@@ -1659,7 +1712,7 @@
     else if (a === "sit") openSituation(v);
     else if (a === "plan") togglePlan(UI.date, v);
     else if (a === "habit") { var d = day(UI.date); d.c[v] = !d.c[v]; save(); render(); }
-    else if (a === "photo") askPhoto(b.getAttribute("data-kind"));
+    else if (a === "photo") askPhoto(b.getAttribute("data-kind"), b.getAttribute("data-slot"));
     else if (a === "viewphoto") openPhoto(v);
     else if (a === "sel") { UI.sel = v; UI.confirm = false; render(); }
     else if (a === "budget") { var dd = draftFor(UI.sel, w).d; dd.budget = +v || null; if (+v) addEvent(todayKey(), "short"); save(); render(); }
@@ -1700,11 +1753,18 @@
       if (!b.getAttribute("data-armed")) { b.setAttribute("data-armed", "1"); b.textContent = "Bấm lần nữa để bỏ"; return; }
       S.prog.drafts[v] = null; flush(); render(); toast("Đã bỏ buổi dở");
     }
-    else if (a === "recent") {
-      var rc = UI.recent && UI.recent[+v]; if (!rc) return;
-      day(UI.date).meals.push({ id: uid(), slot: defaultSlot(), name: rc.name, kcal: rc.kcal, p: rc.p, c: rc.c, f: rc.f });
-      save(); render(); toast("Đã thêm " + rc.name);
+    else if (a === "qadd") {
+      var qf = foodByName(v), qs = b.getAttribute("data-slot"); if (!qf) return;
+      pushMeal(UI.date, qs, { name: qf[1] + " (" + qf[2] + ")", kcal: qf[3], p: qf[4], c: qf[5], f: qf[6] });
+      save(); render(); toast("Đã thêm " + qf[1].split(" / ")[0] + ". Bấm vào món để chỉnh khẩu phần");
     }
+    else if (a === "qrecent") {
+      var qs2 = b.getAttribute("data-slot"), rc = UI.rec && UI.rec[qs2] && UI.rec[qs2][+v]; if (!rc) return;
+      pushMeal(UI.date, qs2, rc); save(); render(); toast("Đã thêm " + rc.name);
+    }
+    else if (a === "addsheet") openAdd(b.getAttribute("data-slot"), b.getAttribute("data-tab") || (b.getAttribute("data-slot") === "Trưa" ? "build" : "dish"), b.getAttribute("data-tab") === "build" && UI.sug && UI.sug.slot === b.getAttribute("data-slot") ? UI.sug : null);
+    else if (a === "suggest-log") { if (UI.sug) { var sg = UI.sug, rs = builderCalc(sg); pushMeal(UI.date, sg.slot, rs); save(); render(); toast("Đã ghi bữa " + sg.slot.toLowerCase() + ": " + int(rs.kcal) + " kcal"); } }
+    else if (a === "editmeal") openEditMeal(v);
     else if (a === "checkin-seen") { S.settings.checkinSeen = v; flush(); render(); }
     else if (a === "drop-ex") { var dx = draftFor(UI.sel, w).d; dx.removed[v] = true; save(); render(); toast("Đã bỏ bài này cho hôm nay"); }
     else if (a === "restore-ex") { var dz = draftFor(UI.sel, w).d; delete dz.removed[v]; save(); render(); }
@@ -1715,14 +1775,6 @@
     }
     else if (a === "finish-yes") finish();
     else if (a === "finish-no") { UI.confirm = false; render(); }
-    else if (a === "open-build") openBuilder(b.getAttribute("data-r") === "1");
-    else if (a === "open-dish") openDish(b.getAttribute("data-r") === "1");
-    else if (a === "addcustom") {
-      var name = document.getElementById("cName").value.trim(), kc = num(document.getElementById("cK").value);
-      if (!name || kc == null || kc < 0) { toast("Cần nhập tên món và số calo"); return; }
-      day(UI.date).meals.push({ id: uid(), slot: document.getElementById("slotC").value, name: name, kcal: kc, p: num(document.getElementById("cP").value) || 0, c: num(document.getElementById("cC").value) || 0, f: num(document.getElementById("cF").value) || 0 });
-      save(); render(); toast("Đã thêm " + name);
-    }
     else if (a === "delmeal") { var dm = day(UI.date); dm.meals = dm.meals.filter(function (m) { return m.id !== v; }); save(); render(); }
     else if (a === "preptab") { UI.prepTab = v; render(); }
     else if (a === "task") {
@@ -1756,14 +1808,14 @@
   });
   sheet.addEventListener("change", function (e) {
     var t = e.target, a = t.getAttribute("data-act");
-    if (a === "b-t") { SH.touched = true; SH.items[+t.getAttribute("data-i")].t = t.value; rerenderSheet(builderHtml()); }
-    else if (a === "b-m") { SH.touched = true; SH.items[+t.getAttribute("data-i")].m = t.value; rerenderSheet(builderHtml()); }
-    else if (a === "d-egg") { SH.egg = t.checked; rerenderSheet(dishHtml()); }
+    if (a === "b-t") { SH.items[+t.getAttribute("data-i")].t = t.value; refreshAdd(); }
+    else if (a === "b-m") { SH.items[+t.getAttribute("data-i")].m = t.value; refreshAdd(); }
+    else if (a === "d-egg") { SH.egg = t.checked; refreshAdd(); }
   });
   sheet.addEventListener("input", function (e) {
-    if (e.target.id !== "dishQ" || SH.kind !== "dish") return;
+    if (e.target.id !== "dishQ" || SH.kind !== "add") return;
     var hadQ = !!SH.q; SH.q = e.target.value; SH.pick = null;
-    if (hadQ !== !!SH.q) { rerenderSheet(dishHtml()); var qi = document.getElementById("dishQ"); qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
+    if (hadQ !== !!SH.q) { refreshAdd(); var qi = document.getElementById("dishQ"); qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
     else document.getElementById("dishList").innerHTML = dishList();
   });
   view.addEventListener("change", function (e) {
