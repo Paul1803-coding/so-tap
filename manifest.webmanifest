@@ -1,7 +1,7 @@
 {
   "name": "FitCore",
   "short_name": "FitCore",
-  "description": "FitCore: tập gym và ăn uống cá nhân hoá.",
+  "description": "FitCore: ghi tập và ăn uống, phân tích tiến bộ theo khoa học.",
   "lang": "vi",
   "start_url": "./",
   "scope": "./",
