@@ -184,7 +184,7 @@
       workouts: [],           // { id, date, ts, key, dur, ex: [{ id, sets: [{kg, reps, rir}] }] }, mới nhất trước
       draft: null,            // buổi đang tập
       food: {},               // ngày -> [{ id, n, kcal, p, c, f, base, mul, ts, rid }]
-      weight: {}, waist: {},  // ngày -> số đo
+      weight: {}, waist: {}, neck: {}, hip: {},  // ngày -> số đo (kg, cm)
       lastBackup: null
     };
   }
@@ -505,7 +505,9 @@
   function vProgress() {
     var h = "";
     if (UI.banner) h += '<div class="banner good">' + esc(UI.banner) + "</div>";
+    h += '<button class="btn dark" data-act="toclaude">Gửi dữ liệu cho Claude phân tích</button>';
     h += reportCard();
+    h += bodyCard();
     h += volumeCard();
     h += strengthCard();
     h += weightCard();
@@ -513,6 +515,126 @@
     h += historyCard();
     return h;
   }
+  // ---------- Thành phần cơ thể ----------
+  // % mỡ theo công thức Hải quân Mỹ (đơn vị cm). Sai số khoảng ±3–4% so với DEXA, nhưng đo đều thì xu hướng tin được.
+  function navyBF(sex, h, waist, neck, hip) {
+    if (!(waist > neck)) return null;
+    var bf = sex === "f" ? 495 / (1.29579 - 0.35004 * Math.log10(waist + (hip || 0) - neck) + 0.221 * Math.log10(h)) - 450
+      : 495 / (1.0324 - 0.19077 * Math.log10(waist - neck) + 0.15456 * Math.log10(h)) - 450;
+    return bf > 3 && bf < 60 ? bf : null;
+  }
+  function latestOn(map, k) { var ks = Object.keys(map).sort(), v = null; ks.forEach(function (x) { if (x <= k) v = map[x]; }); return v != null ? v : (ks.length ? map[ks[0]] : null); }
+  // Mỗi lần đo: % mỡ (làm mượt), cân xu hướng ngày đó, khối mỡ, khối nạc
+  function bodySeries() {
+    var p = S.profile, ts = trendSeries(), out = [], sm = null;
+    if (!p) return out;
+    Object.keys(S.waist).sort().forEach(function (k) {
+      var neck = latestOn(S.neck, k), hip = p.sex === "f" ? latestOn(S.hip, k) : 0;
+      if (neck == null || (p.sex === "f" && !hip)) return;
+      var bf = navyBF(p.sex, p.height, S.waist[k], neck, hip); if (bf == null) return;
+      sm = sm == null ? bf : sm + 0.5 * (bf - sm);
+      var w = ts[k] != null ? ts[k] : (S.weight[k] || trendNow());
+      out.push({ k: k, bf: sm, raw: bf, w: w, fm: w * sm / 100, lm: w * (1 - sm / 100) });
+    });
+    return out;
+  }
+  function bodyAnalysis() {
+    var bs = bodySeries(), p = S.profile; if (!bs.length) return null;
+    var last = bs[bs.length - 1], cut = shiftKey(last.k, -21), ref = bs[0];
+    bs.forEach(function (x) { if (x.k <= cut) ref = x; });
+    var wk = Math.max(0.01, daysBetween(ref.k, last.k) / 7), dF = last.fm - ref.fm, dL = last.lm - ref.lm;
+    var lifts = strengthReport().filter(function (x) { return x.compound && x.m4 != null; }), s4 = lifts.length ? avg(lifts.map(function (x) { return x.m4; })) : null;
+    var v, cls = "";
+    if (bs.length < 2 || wk < 1.5) v = "Cần thêm số đo ở các tuần sau để thấy mỡ và nạc thay đổi thế nào.";
+    else if (dF < -0.2 && dL > -0.3) { v = "Mỡ giảm " + fmt(-dF) + " kg mà vẫn giữ" + (dL > 0.2 ? ", thậm chí tăng " + fmt(dL) + " kg" : "") + " khối nạc: recomp đang đúng hướng."; cls = "good"; }
+    else if (dF < -0.2 && dL <= -0.3) {
+      var share = -dL / Math.max(0.1, -(dF + dL));
+      if (s4 != null && s4 > 0.5) v = "Số đo cho thấy mất " + fmt(-dL) + " kg nạc, nhưng sức mạnh vẫn tăng " + pct(s4) + "/tuần. Phần nạc giảm nhiều khả năng là nước và glycogen. Giữ nguyên, đo lại tuần sau.";
+      else { v = "Đang mất cả cơ: khoảng " + Math.round(share * 100) + "% số cân giảm là khối nạc. Tăng đạm lên 2,0–2,2 g/kg, giảm mức thâm hụt, giữ mức tạ nặng."; cls = "warn"; }
+    }
+    else if (dF > 0.3) { v = "Mỡ tăng " + fmt(dF) + " kg. Kiểm tra lại calo thực ăn so với mục tiêu."; cls = "warn"; }
+    else if (dL > 0.2) { v = "Mỡ gần như giữ nguyên, khối nạc tăng " + fmt(dL) + " kg: đang tăng cơ."; cls = "good"; }
+    else v = "Thành phần cơ thể chưa đổi nhiều. Cần ít nhất 4 tuần để thấy rõ.";
+    var g = p.goalBf || 12, wGoal = last.lm / (1 - g / 100), fatLeft = Math.max(0, last.w - wGoal);
+    var rate = wk >= 1.5 && dF / wk < -0.05 ? dF / wk : (p.rate / 100) * last.w * 0.8, weeksLeft = rate < 0 ? fatLeft / -rate : null;
+    return { bs: bs, last: last, ref: ref, wk: wk, dF: dF, dL: dL, v: v, cls: cls, goal: g, wGoal: wGoal, fatLeft: fatLeft, weeksLeft: weeksLeft, s4: s4 };
+  }
+  function bodyCard() {
+    var a = bodyAnalysis(), p = S.profile, h = '<div class="card' + (a && a.cls ? " " + a.cls + "-b" : "") + '"><div class="row between"><h2>Thành phần cơ thể</h2><button class="link" data-act="waist">Đo</button></div>';
+    if (!a) return h + '<p class="empty">Đo <b>vòng bụng</b> (ngang rốn) và <b>vòng cổ</b> (ngay dưới yết hầu)' + (p.sex === "f" ? " và <b>vòng hông</b> (chỗ to nhất)" : "") + ' mỗi tuần một lần, buổi sáng. App tính % mỡ, khối mỡ và khối nạc theo công thức Hải quân Mỹ.</p></div>';
+    var L = a.last, per = a.wk >= 1.5 ? " / " + Math.round(a.wk) + " tuần" : "";
+    h += '<p class="verdict">' + a.v + "</p><div>";
+    h += '<div class="kv"><span>% mỡ ước tính</span><span><b>' + fmt(L.bf) + "%</b> · mục tiêu " + a.goal + "%</span></div>";
+    h += '<div class="kv"><span>Khối mỡ</span><span><b>' + fmt(L.fm) + " kg</b>" + (a.bs.length > 1 ? ' · <span class="' + (a.dF <= 0 ? "up" : "down") + '">' + (a.dF > 0 ? "+" : "") + fmt(a.dF) + " kg" + per + "</span>" : "") + "</span></div>";
+    h += '<div class="kv"><span>Khối nạc (cơ, xương, nước)</span><span><b>' + fmt(L.lm) + " kg</b>" + (a.bs.length > 1 ? ' · <span class="' + (a.dL >= -0.2 ? "up" : "down") + '">' + (a.dL > 0 ? "+" : "") + fmt(a.dL) + " kg" + per + "</span>" : "") + "</span></div>";
+    if (a.fatLeft > 0) { var eta = a.weeksLeft ? addDays(new Date(), Math.round(a.weeksLeft * 7)) : null; h += '<div class="kv"><span>Để đạt ' + a.goal + "% mỡ</span><span>Cân khoảng <b>" + fmt(a.wGoal) + " kg</b> nếu giữ nguyên khối nạc" + (eta ? " · dự kiến " + MONTHS[eta.getMonth()].toLowerCase() + "/" + eta.getFullYear() : "") + "</span></div>"; }
+    h += "</div>";
+    if (a.bs.length >= 2) {
+      var f0 = a.bs[0];
+      h += dualChart(a.bs.map(function (x) { return { k: x.k, a: x.fm - f0.fm, b: x.lm - f0.lm }; }));
+      h += '<div class="legend"><span><i style="background:var(--accent)"></i>Mỡ thay đổi (kg)</span><span><i style="background:var(--blue)"></i>Nạc thay đổi (kg)</span></div>';
+    }
+    h += '<p class="note">Kỳ vọng: ' + (p.rate < 0 ? "khi ăn thâm hụt, người mới hoặc vừa quay lại tập giữ được hoặc tăng 0–0,5 kg nạc/tháng" : "ăn đủ, người mới tập tăng khoảng 0,5–1 kg nạc/tháng") + ". Công thức thước dây sai số ±3–4%, xem xu hướng là chính.</p>";
+    return h + "</div>";
+  }
+  function dualChart(pts) {
+    var W = 600, H = 170, L = 40, R = 12, T = 12, B = 24, vals = [0];
+    pts.forEach(function (p) { vals.push(p.a, p.b); });
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals); if (mx - mn < 2) { mn -= 1; mx += 1; }
+    var t0 = parseKey(pts[0].k).getTime(), span = Math.max(1, parseKey(pts[pts.length - 1].k).getTime() - t0);
+    function X(k) { return L + (W - L - R) * (parseKey(k).getTime() - t0) / span; }
+    function Y(v) { return T + (H - T - B) * (1 - (v - mn) / (mx - mn)); }
+    function line(f, col) { return '<path d="' + pts.map(function (p, i) { return (i ? "L" : "M") + X(p.k).toFixed(1) + " " + Y(f(p)).toFixed(1); }).join(" ") + '" fill="none" stroke="' + col + '" stroke-width="2.5"/>' + pts.map(function (p) { return '<circle cx="' + X(p.k).toFixed(1) + '" cy="' + Y(f(p)).toFixed(1) + '" r="3.5" fill="' + col + '"/>'; }).join(""); }
+    var g = [mn, 0, mx].map(function (v) { return '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v).toFixed(1) + '" y2="' + Y(v).toFixed(1) + '" stroke="var(--line)"' + (v === 0 ? ' stroke-width="1.5"' : "") + '/><text x="' + (L - 6) + '" y="' + (Y(v) + 4).toFixed(1) + '" text-anchor="end" font-size="12" fill="var(--muted)">' + (v > 0 ? "+" : "") + fmt(v) + "</text>"; }).join("");
+    return '<div class="chart"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Thay đổi mỡ và nạc">' + g + line(function (p) { return p.a; }, "var(--accent)") + line(function (p) { return p.b; }, "var(--blue)") + '<text x="' + L + '" y="' + (H - 6) + '" font-size="12" fill="var(--muted)">' + shortDate(pts[0].k) + '</text><text x="' + (W - R) + '" y="' + (H - 6) + '" font-size="12" text-anchor="end" fill="var(--muted)">' + shortDate(pts[pts.length - 1].k) + "</text></svg></div>";
+  }
+  function openMeasure() {
+    var p = S.profile, ln = latestOn(S.neck, todayKey()), lh = latestOn(S.hip, todayKey());
+    SH = { kind: "measure" };
+    openSheet(head("Số đo tuần này") + '<p class="note">Buổi sáng, trước khi ăn, thở ra bình thường, thước sát da nhưng không siết. Mỗi tuần đo một lần vào cùng một ngày.</p>' +
+      '<label class="field">Vòng bụng ngang rốn (cm)<input id="waIn" inputmode="decimal"></label><label class="field">Vòng cổ ngay dưới yết hầu (cm)<input id="neIn" inputmode="decimal" value="' + (ln != null ? fmt(ln) : "") + '"></label>' +
+      (p.sex === "f" ? '<label class="field">Vòng hông chỗ to nhất (cm)<input id="hpIn" inputmode="decimal" value="' + (lh != null ? fmt(lh) : "") + '"></label>' : "") +
+      '<p class="note">Vòng cổ gần như không đổi, đo một lần rồi để nguyên cũng được.</p><button class="btn" data-act="savewaist">Lưu</button>');
+  }
+
+  // ---------- Gửi dữ liệu cho Claude ----------
+  function claudeText() {
+    var p = S.profile, t = todayKey(), L = [], r = estimateTDEE(), ts = trendSeries();
+    L.push("FITCORE · dữ liệu gửi Claude · " + shortDate(t));
+    L.push("Hồ sơ: " + (p.sex === "m" ? "nam" : "nữ") + ", " + p.age + " tuổi, " + p.height + " cm. Mục tiêu " + (p.rate ? fmt(p.rate) + "% cân/tuần" : "giữ cân") + ", đạm " + String(p.pkg).replace(".", ",") + " g/kg, mỡ mục tiêu " + (p.goalBf || 12) + "%, " + p.weekly + " buổi tập/tuần.");
+    L.push("Mục tiêu đang dùng: " + S.plan.kcal + " kcal, " + S.plan.p + " g đạm. TDEE " + r.tdee + (r.est ? " (đo được " + r.est + ", tin cậy " + Math.round(r.conf * 100) + "%)" : " (ước tính công thức)") + ".");
+    L.push(""); L.push("Theo tuần (thứ Hai–Chủ nhật):");
+    var ws = keyOf(weekStart(new Date()));
+    for (var i = 3; i >= 0; i--) {
+      var a = shiftKey(ws, -7 * i), b = shiftKey(a, 6), days = [], wts = [], ses = S.workouts.filter(function (w) { return w.date >= a && w.date <= b; });
+      for (var d = a; d <= b && d <= t; d = shiftKey(d, 1)) { if (loggedDay(d)) days.push(daySum(d)); if (S.weight[d] != null) wts.push(S.weight[d]); }
+      var v = volume(a, b), hs = Object.keys(v).reduce(function (x, m) { return x + v[m]; }, 0);
+      L.push("- " + shortDate(a) + "–" + shortDate(b) + ": cân TB " + (wts.length ? fmt(avg(wts)) + " (" + wts.length + " lần)" : "–") + ", xu hướng cuối tuần " + (ts[b > t ? t : b] != null ? fmt(ts[b > t ? t : b]) : "–") + "; ăn TB " + (days.length ? int(avg(days.map(function (x) { return x.kcal; }))) + " kcal / " + int(avg(days.map(function (x) { return x.p; }))) + " g đạm (" + days.length + " ngày ghi đủ)" : "chưa ghi đủ") + "; " + ses.length + " buổi tập, " + fmt(hs) + " hiệp nặng.");
+    }
+    var bs = bodySeries();
+    if (bs.length) { L.push(""); L.push("Số đo (bụng/cổ → mỡ, khối mỡ, khối nạc):"); bs.slice(-6).forEach(function (x) { L.push("- " + shortDate(x.k) + ": bụng " + fmt(S.waist[x.k]) + " cm → " + fmt(x.raw) + "% mỡ, " + fmt(x.fm) + " kg mỡ, " + fmt(x.lm) + " kg nạc"); }); }
+    else if (Object.keys(S.waist).length) { L.push(""); L.push("Vòng bụng: " + Object.keys(S.waist).sort().slice(-6).map(function (k) { return shortDate(k) + " " + fmt(S.waist[k]); }).join(", ") + " (chưa có vòng cổ)."); }
+    var sr = strengthReport().filter(function (x) { return x.compound; });
+    if (sr.length) {
+      L.push(""); L.push("Sức mạnh bài chính (1RM ước tính, từng buổi gần nhất):");
+      sr.forEach(function (x) { var hh = exHistory(x.id).slice(-5); L.push("- " + x.ex.n + ": " + hh.map(function (q) { return fmt(q.e); }).join(" → ") + (x.stall ? " (chững)" : "") + "; buổi gần nhất " + hh[hh.length - 1].sets.map(function (s2) { return fmt(s2.kg) + "×" + s2.reps + "@" + (s2.rir == null ? "?" : s2.rir); }).join(", ")); });
+    }
+    var v7 = volume(shiftKey(t, -6), t);
+    L.push(""); L.push("Hiệp nặng 7 ngày: " + Object.keys(MUSCLES).map(function (m) { return MUSCLES[m][0] + " " + fmt(v7[m]); }).join(", ") + ".");
+    var fbl = [];
+    S.workouts.slice(0, 12).forEach(function (w) { w.ex.forEach(function (e) { if (e.fb && e.fb !== "ok") fbl.push(EXDB[e.id].n + ": " + { meh: "tạm", pain: "đau khớp", nofeel: "không cảm nhận cơ" }[e.fb] + " (" + shortDate(w.date) + ")"); }); });
+    if (fbl.length) { L.push("Phản hồi bài tập: " + fbl.join("; ") + "."); }
+    var sw = Object.keys(S.swaps); if (sw.length) L.push("Đã đổi bài: " + sw.map(function (k) { return SLOT[k].role + " → " + EXDB[S.swaps[k]].n; }).join("; ") + ".");
+    var noEq = EQUIP.filter(function (q) { return S.equip[q[0]] === false; }).map(function (q) { return q[1]; }); if (noEq.length) L.push("Phòng tập không có: " + noEq.join(", ") + ".");
+    L.push(""); L.push("Câu hỏi của tôi: ");
+    return L.join("\n");
+  }
+  function shareClaude() {
+    var txt = claudeText();
+    SH = { kind: "claude" };
+    openSheet(head("Gửi cho Claude") + '<p class="note">Bản tóm tắt 4 tuần gần nhất. Chép rồi dán vào chat với Claude, viết thêm câu hỏi ở dòng cuối.</p><textarea id="clText" class="cltext" readonly>' + esc(txt) + '</textarea><div class="grid2"><button class="btn" data-act="copyclaude">Chép</button>' + (navigator.share ? '<button class="btn ghost" data-act="shareclaude">Chia sẻ…</button>' : "") + "</div>");
+  }
+
   function reportCard() {
     var p = S.profile, r = estimateTDEE(), ts = trendSeries(), t = todayKey(), tw = ts[t], t7 = ts[shiftKey(t, -7)];
     var rate = tw != null && t7 != null ? tw - t7 : null, goal = p.rate / 100 * (tw || p.weight);
@@ -642,11 +764,11 @@
 
   // ---- Hồ sơ ----
   function openProfile() {
-    var p = S.profile || { sex: "m", age: 25, height: 171, weight: 80, act: 1.5, rate: -0.5, pkg: 1.75, weekly: 4 };
+    var p = S.profile || { sex: "m", age: 25, height: 171, weight: 80, act: 1.5, rate: -0.5, pkg: 1.75, weekly: 4, goalBf: 12 };
     var sel = function (id, list, v) { return '<select id="' + id + '">' + list.map(function (x) { return '<option value="' + x[0] + '"' + (String(x[0]) === String(v) ? " selected" : "") + ">" + x[1] + "</option>"; }).join("") + "</select>"; };
     SH = { kind: "profile" };
     openSheet(head("Hồ sơ") + '<div class="grid2"><label class="field">Giới tính' + sel("pSex", [["m", "Nam"], ["f", "Nữ"]], p.sex) + '</label><label class="field">Tuổi<input id="pAge" inputmode="numeric" value="' + p.age + '"></label><label class="field">Chiều cao (cm)<input id="pH" inputmode="numeric" value="' + p.height + '"></label><label class="field">Cân nặng hiện tại (kg)<input id="pW" inputmode="decimal" value="' + fmt(p.weight) + '"></label></div>' +
-      '<label class="field">Mức vận động ngoài giờ tập' + sel("pAct", ACTS, p.act) + '</label><label class="field">Mục tiêu' + sel("pRate", RATES, p.rate) + '</label><div class="grid2"><label class="field">Đạm (g mỗi kg)' + sel("pPkg", [[1.6, "1,6 g/kg"], [1.75, "1,75 g/kg"], [2, "2,0 g/kg"], [2.2, "2,2 g/kg"]], p.pkg) + '</label><label class="field">Buổi tập mỗi tuần' + sel("pWk", [[3, "3"], [4, "4"], [5, "5"]], p.weekly) + "</label></div>" +
+      '<label class="field">Mức vận động ngoài giờ tập' + sel("pAct", ACTS, p.act) + '</label><label class="field">Mục tiêu' + sel("pRate", RATES, p.rate) + '</label><div class="grid2"><label class="field">Đạm (g mỗi kg)' + sel("pPkg", [[1.6, "1,6 g/kg"], [1.75, "1,75 g/kg"], [2, "2,0 g/kg"], [2.2, "2,2 g/kg"]], p.pkg) + '</label><label class="field">Buổi tập mỗi tuần' + sel("pWk", [[3, "3"], [4, "4"], [5, "5"]], p.weekly) + '</label></div><label class="field">Mục tiêu % mỡ' + sel("pBf", [[10, "10%"], [12, "12%"], [15, "15%"], [18, "18%"], [20, "20%"], [25, "25% (nữ)"]], p.goalBf || 12) + "</label>" +
       '<p class="note">Calo khởi đầu tính theo công thức Mifflin–St Jeor × mức vận động. Sau 2–3 tuần app thay bằng con số đo từ cơ thể bạn. Đạm 1,6–2,2 g/kg là mức nghiên cứu khuyên dùng khi tập tạ và giảm mỡ.</p><button class="btn" data-act="saveprofile">Lưu</button>');
   }
   // ---- Thêm món ----
@@ -749,8 +871,8 @@
     var lb = S.lastBackup;
     openSheet(head("Cài đặt") + '<div class="grid2"><button class="btn ghost" data-act="profile">Hồ sơ, mục tiêu</button><button class="btn ghost" data-act="equip">Dụng cụ phòng tập</button></div>' +
       '<div class="card"><h2>Sao lưu</h2><p class="note">Dữ liệu chỉ nằm trên máy này. Sao lưu ra file rồi cất vào Drive hoặc Zalo.' + (lb ? " Lần gần nhất " + new Date(lb).toLocaleDateString("vi-VN") + "." : "") + '</p><div class="grid2"><button class="btn" data-act="backup">Sao lưu</button><button class="btn ghost" data-act="restore">Khôi phục</button></div></div>' +
-      '<div class="card"><h2>Cách app tính</h2><ul style="margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px"><li><b>1RM ước tính</b> = kg × (1 + (rep + RIR) / 30).</li><li><b>Hiệp nặng</b>: hiệp có RIR 0–3. Vùng nên đạt 10–20 hiệp mỗi nhóm cơ lớn mỗi tuần.</li><li><b>Tăng tạ</b> khi đạt đỉnh khoảng rep ở mọi hiệp mà vẫn còn dư rep.</li><li><b>Chững</b>: 3 buổi liền không vượt kỷ lục 1RM cũ.</li><li><b>Chọn bài</b>: mỗi vị trí trong giáo án có vài bài xếp theo ưu tiên; app lấy bài đầu tiên bạn có dụng cụ. Báo đau khớp, hoặc 2/3 buổi không cảm nhận cơ, thì app khuyên đổi bài.</li><li><b>Cân xu hướng</b>: trung bình trượt, mỗi ngày lấy 10% số cân mới.</li><li><b>TDEE</b> = calo ăn trung bình − thay đổi cân xu hướng × 7.700 kcal/kg, tính trên 3 tuần gần nhất.</li></ul></div>' +
-      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 3.1</p>');
+      '<div class="card"><h2>Cách app tính</h2><ul style="margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px"><li><b>1RM ước tính</b> = kg × (1 + (rep + RIR) / 30).</li><li><b>Hiệp nặng</b>: hiệp có RIR 0–3. Vùng nên đạt 10–20 hiệp mỗi nhóm cơ lớn mỗi tuần.</li><li><b>Tăng tạ</b> khi đạt đỉnh khoảng rep ở mọi hiệp mà vẫn còn dư rep.</li><li><b>Chững</b>: 3 buổi liền không vượt kỷ lục 1RM cũ.</li><li><b>Chọn bài</b>: mỗi vị trí trong giáo án có vài bài xếp theo ưu tiên; app lấy bài đầu tiên bạn có dụng cụ. Báo đau khớp, hoặc 2/3 buổi không cảm nhận cơ, thì app khuyên đổi bài.</li><li><b>Cân xu hướng</b>: trung bình trượt, mỗi ngày lấy 10% số cân mới.</li><li><b>% mỡ</b>: công thức Hải quân Mỹ từ vòng bụng, vòng cổ, chiều cao (nữ thêm vòng hông). Khối mỡ = cân xu hướng × % mỡ, khối nạc = phần còn lại.</li><li><b>TDEE</b> = calo ăn trung bình − thay đổi cân xu hướng × 7.700 kcal/kg, tính trên 3 tuần gần nhất.</li></ul></div>' +
+      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 3.2</p>');
   }
 
   // =====================================================================
@@ -818,7 +940,8 @@
     else if (a === "edit") openEdit(v);
     else if (a === "recipe") openRecipe(v);
     else if (a === "allrecipes") { openAdd(); SH.view = "recipes"; reSheet(addHtml()); }
-    else if (a === "waist") { SH = { kind: "waist" }; openSheet(head("Vòng bụng") + '<p class="note">Đo ngang rốn, buổi sáng, thở ra bình thường. Mỗi tuần một lần.</p><label class="field">Vòng bụng (cm)<input id="waIn" inputmode="decimal"></label><button class="btn" data-act="savewaist">Lưu</button>'); }
+    else if (a === "waist") openMeasure();
+    else if (a === "toclaude") shareClaude();
     else if (a === "recalc") { var r = estimateTDEE(), np = planFrom(r.tdee), old = S.plan.kcal; S.checkins.unshift({ date: todayKey(), tdee: np.tdee, est: r.est, kcal: np.kcal, p: np.p, from: old }); S.plan = np; flush(); UI.banner = "Mục tiêu mới: " + int(np.kcal) + " kcal (" + (np.kcal >= old ? "+" : "") + int(np.kcal - old) + "), " + np.p + "g đạm."; render(); }
     else if (a === "calmode") { UI.calMode = v; render(); }
     else if (a === "alllifts") { UI.allLifts = !UI.allLifts; render(); }
@@ -843,7 +966,7 @@
     if (a === "close") closeSheet();
     else if (a === "saveprofile") {
       var g = function (id) { return document.getElementById(id).value; };
-      var p = { sex: g("pSex"), age: num(g("pAge")), height: num(g("pH")), weight: num(g("pW")), act: +g("pAct"), rate: +g("pRate"), pkg: +g("pPkg"), weekly: +g("pWk") };
+      var p = { sex: g("pSex"), age: num(g("pAge")), height: num(g("pH")), weight: num(g("pW")), act: +g("pAct"), rate: +g("pRate"), pkg: +g("pPkg"), weekly: +g("pWk"), goalBf: +g("pBf") };
       if (!(p.age >= 14 && p.age <= 90 && p.height >= 130 && p.height <= 220 && p.weight >= 35 && p.weight <= 250)) { toast("Kiểm tra lại tuổi, chiều cao (cm), cân nặng (kg)"); return; }
       var first = !S.profile;
       p.tdee0 = Math.round(bmr(p, p.weight) * p.act); p.start = (S.profile && S.profile.start) || todayKey();
@@ -880,8 +1003,17 @@
       if (S.draft) S.draft.ex.forEach(function (e, k) { if (!hasEq(e.id) && !e.sets.some(function (s2) { return s2.done; })) doSwap(k, actualEx(SLOT[e.slot]).id, true); });
       flush(); closeSheet(); render(); toast("Đã lưu dụng cụ");
     }
-    else if (a === "savewaist") { var wa = num(document.getElementById("waIn").value); if (!(wa >= 40 && wa <= 200)) { toast("Nhập vòng bụng bằng cm"); return; } S.waist[todayKey()] = wa; flush(); closeSheet(); render(); }
+    else if (a === "savewaist") {
+      var wa = num(document.getElementById("waIn").value), ne = num(document.getElementById("neIn").value), hpEl = document.getElementById("hpIn"), hp = hpEl ? num(hpEl.value) : null;
+      if (!(wa >= 40 && wa <= 200)) { toast("Nhập vòng bụng bằng cm"); return; }
+      if (ne != null && !(ne >= 25 && ne <= 60)) { toast("Vòng cổ thường 30–50 cm, kiểm tra lại"); return; }
+      var tk = todayKey(); S.waist[tk] = wa; if (ne != null) S.neck[tk] = ne; if (hp != null && hp >= 60 && hp <= 180) S.hip[tk] = hp;
+      flush(); closeSheet(); render();
+      var bs = bodySeries(); toast(bs.length && bs[bs.length - 1].k === tk ? "Mỡ ước tính " + fmt(bs[bs.length - 1].raw) + "%" : "Đã lưu số đo");
+    }
+    else if (a === "copyclaude") { var ta = document.getElementById("clText"); ta.select(); try { navigator.clipboard.writeText(ta.value).then(function () { toast("Đã chép. Dán vào chat với Claude."); }, function () { toast("Bấm giữ vào ô chữ để chép."); }); } catch (er) { toast("Bấm giữ vào ô chữ để chép."); } }
     else if (a === "backup") backup();
+    else if (a === "shareclaude") { navigator.share({ title: "FitCore", text: document.getElementById("clText").value }).catch(function () {}); }
     else if (a === "restore") document.getElementById("importFile").click();
     else if (a === "wipe") { if (b.getAttribute("data-armed")) { S = blank(); flush(); closeSheet(); render(); openProfile(); toast("Đã xoá toàn bộ"); } else { b.setAttribute("data-armed", "1"); b.textContent = "Bấm lần nữa để xoá hẳn"; } }
   });
