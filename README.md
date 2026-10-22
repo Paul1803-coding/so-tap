@@ -4,7 +4,7 @@ App ghi tập gym và ăn uống, tự phân tích tiến bộ theo các phươn
 
 ## Ba mục
 
-- **Tập:** giáo án Upper A → Lower A → Upper B → Lower B. Mỗi hiệp ghi kg, rep và RIR (còn dư mấy rep). App đề xuất mức tạ buổi sau theo tăng tiến kép, đồng hồ nghỉ tự chạy, kết thúc buổi có tổng kết và kỷ lục.
+- **Tập:** giáo án Upper A → Lower A → Upper B → Lower B, bài tự chọn theo dụng cụ phòng tập (khai báo trong ⚙️). Mỗi hiệp ghi kg, rep và RIR (còn dư mấy rep). App đề xuất mức tạ buổi sau theo tăng tiến kép, đồng hồ nghỉ tự chạy, kết thúc buổi có tổng kết và kỷ lục.
 - **Ăn:** chỉ hiện calo và đạm còn lại. Thêm món bằng tìm kiếm, món quen (tự nhớ theo giờ ăn), ước lượng đĩa cơm bằng bàn tay, hoặc nhập số. Buổi chiều có "Tối nay nấu gì?" với 3 món từ 12 công thức, lượng cơm đã chỉnh vừa phần calo còn lại.
 - **Tiến độ:** báo cáo tuần (cân xu hướng, TDEE đo được, mục tiêu, sức mạnh, vòng bụng), số hiệp nặng mỗi nhóm cơ, sức mạnh từng bài kèm cảnh báo chững lại và gợi ý giảm tải, biểu đồ, lịch tháng và năm.
 
@@ -20,6 +20,7 @@ App ghi tập gym và ăn uống, tự phân tích tiến bộ theo các phươn
 | TDEE | Calo ăn trung bình (chỉ tính ngày ghi đủ) − thay đổi cân xu hướng × 7.700 kcal/kg, trên 3 tuần gần nhất, pha với ước tính Mifflin–St Jeor theo độ tin cậy |
 | Mục tiêu calo | TDEE + mức thâm hụt theo tốc độ đã chọn (% cân nặng mỗi tuần). Tự cập nhật mỗi thứ Hai |
 | Đạm | 1,6–2,2 g mỗi kg cân nặng, chọn trong hồ sơ |
+| Chọn bài | Giáo án chia theo vị trí (đẩy ngang, gập hông, gập gối…). Mỗi vị trí có 2–4 bài xếp theo ưu tiên; app lấy bài đầu tiên phòng tập có dụng cụ. Báo đau khớp 1 lần, hoặc không cảm nhận cơ 2/3 buổi, thì app khuyên đổi bài |
 
 Dữ liệu lưu trên điện thoại, không gửi đi đâu. Vào ⚙️ → Sao lưu để xuất file.
 

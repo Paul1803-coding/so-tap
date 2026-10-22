@@ -11,62 +11,88 @@
     quads: ["Đùi trước", 10, 20], hams: ["Đùi sau, mông", 10, 20], calves: ["Bắp chân", 6, 12], abs: ["Bụng", 6, 12]
   };
 
-  // Giáo án Upper/Lower xoay vòng. m: hiệp tính cho nhóm cơ (1 = cơ chính, 0,5 = cơ phụ). inc: bước tăng tạ (kg).
+  // Dụng cụ phòng tập. "none" là không cần dụng cụ.
+  var EQUIP = [
+    ["barbell", "Đòn tạ + giá squat"], ["smith", "Máy Smith"], ["db", "Tạ đơn + ghế"], ["cable", "Máy cáp (pulley)"], ["latpd", "Máy lat pulldown"],
+    ["pullbar", "Xà đơn"], ["upm", "Máy thân trên (chest press, row máy, shoulder press máy)"], ["pecdeck", "Máy pec deck"], ["legpress", "Máy đạp đùi (leg press)"],
+    ["hack", "Máy hack squat"], ["legext", "Máy leg extension"], ["lycurl", "Máy leg curl nằm"], ["seatcurl", "Máy leg curl ngồi"], ["calfm", "Máy calf đứng"], ["calfseat", "Máy calf ngồi"]
+  ];
+  // Thư viện bài: tên, dụng cụ, bước tăng tạ (kg), từ khoá video, không cần tạ
+  var EXL = {
+    smbench: ["Smith bench press", "smith", 2.5, "smith machine bench press"], bbbench: ["Barbell bench press", "barbell", 2.5, "barbell bench press"],
+    dbbench: ["DB bench press", "db", 2, "dumbbell bench press"], machpress: ["Chest press máy", "upm", 2.5, "machine chest press"],
+    incdb: ["Incline DB press", "db", 2, "incline dumbbell press"], incsmith: ["Incline Smith press", "smith", 2.5, "incline smith press"], incbb: ["Incline barbell press", "barbell", 2.5, "incline barbell press"],
+    pecdeck: ["Pec deck", "pecdeck", 2.5, "pec deck fly"], cablefly: ["Cable fly", "cable", 2.5, "cable fly"], dbfly: ["DB fly", "db", 1, "dumbbell fly"],
+    brow: ["Barbell row", "barbell", 2.5, "barbell row"], machrow: ["Row máy tựa ngực", "upm", 2.5, "chest supported machine row"],
+    cablerow: ["Seated cable row", "cable", 2.5, "seated cable row"], dbrow: ["DB row 1 tay", "db", 2, "one arm dumbbell row"],
+    latpd: ["Lat pulldown", "latpd", 2.5, "lat pulldown"], pullup: ["Pulldown tay ngửa", "latpd", 2.5, "underhand lat pulldown"], chinup: ["Pull-up xà đơn", "pullbar", 0, "pull up", 1],
+    smohp: ["Smith OHP ngồi", "smith", 2.5, "seated smith shoulder press"], dbohp: ["DB shoulder press ngồi", "db", 2, "seated dumbbell shoulder press"], machohp: ["Shoulder press máy", "upm", 2.5, "machine shoulder press"],
+    latraise: ["Lateral raise tạ đơn", "db", 1, "dumbbell lateral raise"], latcable: ["Lateral raise cáp", "cable", 1.25, "cable lateral raise"], latmach: ["Lateral raise máy", "upm", 2.5, "machine lateral raise"],
+    tripd: ["Triceps pushdown", "cable", 2.5, "cable triceps pushdown"], ohtri: ["Triceps qua đầu (cáp)", "cable", 2.5, "overhead cable triceps extension"],
+    dbohtri: ["Triceps qua đầu tạ đơn", "db", 2, "dumbbell overhead triceps extension"], skull: ["Skull crusher", "barbell", 2.5, "ez bar skull crusher"],
+    dbcurl: ["DB curl", "db", 1, "dumbbell curl"], inccurl: ["Incline curl", "db", 1, "incline dumbbell curl"], cablecurl: ["Cable curl", "cable", 2.5, "cable curl"], ezcurl: ["EZ bar curl", "barbell", 2.5, "ez bar curl"],
+    squat: ["Back squat", "barbell", 2.5, "barbell back squat"], hack: ["Hack squat", "hack", 5, "hack squat machine"], smsquat: ["Smith squat", "smith", 2.5, "smith machine squat"],
+    legpress: ["Leg press", "legpress", 5, "leg press"], goblet: ["Goblet squat", "db", 2, "goblet squat"], legext: ["Leg extension", "legext", 2.5, "leg extension"],
+    bss: ["Bulgarian split squat", "db", 2, "bulgarian split squat"],
+    rdl: ["Romanian deadlift", "barbell", 2.5, "romanian deadlift"], dbrdl: ["DB Romanian deadlift", "db", 2, "dumbbell romanian deadlift"],
+    dl: ["Deadlift", "barbell", 2.5, "conventional deadlift"], hipthrust: ["Hip thrust", "barbell", 2.5, "barbell hip thrust"],
+    seatcurl: ["Leg curl ngồi", "seatcurl", 2.5, "seated leg curl"], legcurl: ["Leg curl nằm", "lycurl", 2.5, "lying leg curl"],
+    dbcurlham: ["Leg curl tạ đơn nằm sấp", "db", 1, "dumbbell lying leg curl"], nordic: ["Nordic curl có trợ lực", "none", 0, "assisted nordic curl", 1],
+    calfst: ["Calf raise đứng (máy)", "calfm", 2.5, "standing calf raise machine"], calflp: ["Calf raise máy đạp đùi", "legpress", 5, "leg press calf raise"],
+    calfsm: ["Calf raise Smith", "smith", 2.5, "smith machine calf raise"], calfdb: ["Calf raise tạ đơn 1 chân", "db", 2, "single leg dumbbell calf raise"], calfsit: ["Calf raise ngồi", "calfseat", 2.5, "seated calf raise"],
+    crunch: ["Cable crunch", "cable", 2.5, "kneeling cable crunch"], abmach: ["Ab crunch máy", "upm", 2.5, "ab crunch machine"],
+    hlr: ["Hanging leg raise", "pullbar", 0, "hanging leg raise", 1], kneeraise: ["Nâng gối nằm ngửa", "none", 0, "lying knee raise", 1]
+  };
+  // Giáo án Upper/Lower xoay vòng, chia theo vị trí. c: các bài cho vị trí đó, xếp theo ưu tiên; app lấy bài đầu tiên có dụng cụ.
+  // m: hiệp tính cho nhóm cơ (1 = cơ chính, 0,5 = cơ phụ).
   var PROGRAM = {
-    UA: { name: "Upper A", sub: "Ngực · lưng nặng", ex: [
-      { id: "smbench", n: "Smith bench press", t: "C", s: 3, r: "6–8", inc: 2.5, m: { chest: 1, triceps: 0.5, delts: 0.5 }, q: "smith machine bench press form" },
-      { id: "brow", n: "Barbell row", t: "C", s: 3, r: "8–10", inc: 2.5, m: { back: 1, biceps: 0.5 }, q: "barbell row form" },
-      { id: "incdb", n: "Incline DB press", t: "C", s: 3, r: "8–12", inc: 2, m: { chest: 1, delts: 0.5, triceps: 0.5 }, q: "incline dumbbell press form" },
-      { id: "latpd", n: "Lat pulldown", t: "C", s: 3, r: "10–12", inc: 2.5, m: { back: 1, biceps: 0.5 }, q: "lat pulldown form" },
-      { id: "tripd", n: "Triceps pushdown", t: "I", s: 3, r: "10–15", inc: 2.5, m: { triceps: 1 }, q: "cable triceps pushdown form" },
-      { id: "dbcurl", n: "DB curl", t: "I", s: 3, r: "10–15", inc: 1, m: { biceps: 1 }, q: "dumbbell curl form" },
-      { id: "latraise", n: "Lateral raise", t: "I", s: 3, r: "12–15", inc: 1, m: { delts: 1 }, q: "dumbbell lateral raise form" }
+    UA: { name: "Upper A", sub: "Ngực, lưng làm chính", ex: [
+      { id: "ua1", role: "Đẩy ngang", t: "C", s: 3, r: "6–8", m: { chest: 1, triceps: 0.5, delts: 0.5 }, c: ["smbench", "bbbench", "dbbench", "machpress"] },
+      { id: "ua2", role: "Kéo ngang", t: "C", s: 3, r: "8–10", m: { back: 1, biceps: 0.5 }, c: ["brow", "machrow", "cablerow", "dbrow"] },
+      { id: "ua3", role: "Đẩy dốc lên", t: "C", s: 3, r: "8–12", m: { chest: 1, delts: 0.5, triceps: 0.5 }, c: ["incdb", "incsmith", "incbb"] },
+      { id: "ua4", role: "Kéo dọc", t: "C", s: 3, r: "10–12", m: { back: 1, biceps: 0.5 }, c: ["latpd", "chinup"] },
+      { id: "ua5", role: "Tay sau", t: "I", s: 3, r: "10–15", m: { triceps: 1 }, c: ["tripd", "ohtri", "dbohtri", "skull"] },
+      { id: "ua6", role: "Tay trước", t: "I", s: 3, r: "10–15", m: { biceps: 1 }, c: ["dbcurl", "cablecurl", "ezcurl"] },
+      { id: "ua7", role: "Vai giữa", t: "I", s: 3, r: "12–15", m: { delts: 1 }, c: ["latraise", "latcable", "latmach"] }
     ]},
     LA: { name: "Lower A", sub: "Squat làm chính", ex: [
-      { id: "squat", n: "Back squat", t: "C", s: 3, r: "6–8", inc: 2.5, m: { quads: 1, hams: 0.5 }, q: "barbell back squat form" },
-      { id: "rdl", n: "Romanian deadlift", t: "C", s: 3, r: "8–10", inc: 2.5, m: { hams: 1 }, q: "romanian deadlift form" },
-      { id: "legpress", n: "Leg press", t: "C", s: 3, r: "10–12", inc: 5, m: { quads: 1, hams: 0.5 }, q: "leg press form" },
-      { id: "legcurl", n: "Leg curl", t: "I", s: 3, r: "10–15", inc: 2.5, m: { hams: 1 }, q: "lying leg curl form" },
-      { id: "calfst", n: "Calf raise đứng", t: "I", s: 3, r: "12–15", inc: 2.5, m: { calves: 1 }, q: "standing calf raise form" },
-      { id: "crunch", n: "Cable crunch", t: "I", s: 3, r: "12–15", inc: 2.5, m: { abs: 1 }, q: "kneeling cable crunch form" }
+      { id: "la1", role: "Squat", t: "C", s: 3, r: "6–8", m: { quads: 1, hams: 0.5 }, c: ["squat", "hack", "smsquat", "goblet"] },
+      { id: "la2", role: "Gập hông", t: "C", s: 3, r: "8–10", m: { hams: 1 }, c: ["rdl", "dbrdl"] },
+      { id: "la3", role: "Duỗi gối", t: "I", s: 3, r: "10–15", m: { quads: 1 }, c: ["legext", "legpress", "goblet"] },
+      { id: "la4", role: "Gập gối", t: "I", s: 3, r: "10–15", m: { hams: 1 }, c: ["seatcurl", "legcurl", "dbcurlham", "nordic"] },
+      { id: "la5", role: "Bắp chân", t: "I", s: 3, r: "12–15", m: { calves: 1 }, c: ["calfst", "calflp", "calfsm", "calfdb"] },
+      { id: "la6", role: "Bụng", t: "I", s: 3, r: "12–15", m: { abs: 1 }, c: ["crunch", "abmach", "kneeraise"] }
     ]},
-    UB: { name: "Upper B", sub: "Vai · xô", ex: [
-      { id: "smohp", n: "Smith OHP ngồi", t: "C", s: 3, r: "6–10", inc: 2.5, m: { delts: 1, triceps: 0.5 }, q: "seated smith machine shoulder press form" },
-      { id: "pullup", n: "Pulldown tay ngửa", t: "C", s: 3, r: "6–10", inc: 2.5, m: { back: 1, biceps: 0.5 }, q: "underhand lat pulldown form" },
-      { id: "dbbench", n: "DB bench press", t: "C", s: 3, r: "8–12", inc: 2, m: { chest: 1, triceps: 0.5, delts: 0.5 }, q: "dumbbell bench press form" },
-      { id: "cablerow", n: "Seated cable row", t: "C", s: 3, r: "10–12", inc: 2.5, m: { back: 1, biceps: 0.5 }, q: "seated cable row form" },
-      { id: "latcable", n: "Lateral raise cáp", t: "I", s: 3, r: "12–15", inc: 1.25, m: { delts: 1 }, q: "cable lateral raise form" },
-      { id: "inccurl", n: "Incline curl", t: "I", s: 3, r: "10–15", inc: 1, m: { biceps: 1 }, q: "incline dumbbell curl form" },
-      { id: "ohtri", n: "Triceps qua đầu", t: "I", s: 3, r: "10–15", inc: 2.5, m: { triceps: 1 }, q: "overhead cable triceps extension form" },
-      { id: "pecdeck", n: "Pec deck", t: "I", s: 3, r: "12–15", inc: 2.5, m: { chest: 1 }, q: "pec deck fly form" }
+    UB: { name: "Upper B", sub: "Vai, xô làm chính", ex: [
+      { id: "ub1", role: "Đẩy dọc", t: "C", s: 3, r: "6–10", m: { delts: 1, triceps: 0.5 }, c: ["smohp", "dbohp", "machohp"] },
+      { id: "ub2", role: "Kéo dọc", t: "C", s: 3, r: "6–10", m: { back: 1, biceps: 0.5 }, c: ["pullup", "chinup", "latpd"] },
+      { id: "ub3", role: "Đẩy ngang", t: "C", s: 3, r: "8–12", m: { chest: 1, triceps: 0.5, delts: 0.5 }, c: ["dbbench", "machpress", "bbbench", "smbench"] },
+      { id: "ub4", role: "Kéo ngang", t: "C", s: 3, r: "10–12", m: { back: 1, biceps: 0.5 }, c: ["cablerow", "machrow", "dbrow"] },
+      { id: "ub5", role: "Vai giữa", t: "I", s: 3, r: "12–15", m: { delts: 1 }, c: ["latcable", "latraise", "latmach"] },
+      { id: "ub6", role: "Tay trước (cơ duỗi dài)", t: "I", s: 3, r: "10–15", m: { biceps: 1 }, c: ["inccurl", "cablecurl", "dbcurl"] },
+      { id: "ub7", role: "Tay sau qua đầu", t: "I", s: 3, r: "10–15", m: { triceps: 1 }, c: ["ohtri", "dbohtri", "skull"] },
+      { id: "ub8", role: "Ép ngực", t: "I", s: 3, r: "12–15", m: { chest: 1 }, c: ["pecdeck", "cablefly", "dbfly"] }
     ]},
     LB: { name: "Lower B", sub: "Deadlift làm chính", ex: [
-      { id: "dl", n: "Deadlift", t: "C", s: 3, r: "4–6", inc: 2.5, m: { hams: 1, back: 0.5, quads: 0.25 }, q: "conventional deadlift form" },
-      { id: "bss", n: "Bulgarian split squat", t: "C", s: 3, r: "8–10", inc: 2, m: { quads: 1, hams: 0.5 }, q: "bulgarian split squat form" },
-      { id: "seatcurl", n: "Seated leg curl", t: "I", s: 3, r: "10–12", inc: 2.5, m: { hams: 1 }, q: "seated leg curl form" },
-      { id: "legext", n: "Leg extension", t: "I", s: 3, r: "12–15", inc: 2.5, m: { quads: 1 }, q: "leg extension form" },
-      { id: "calfsit", n: "Calf raise ngồi", t: "I", s: 3, r: "12–15", inc: 2.5, m: { calves: 1 }, q: "seated calf raise form" },
-      { id: "hlr", n: "Hanging leg raise", t: "I", s: 3, r: "10–15", inc: 0, m: { abs: 1 }, q: "hanging leg raise form", bw: true }
+      { id: "lb1", role: "Gập hông nặng", t: "C", s: 3, r: "4–6", m: { hams: 1, back: 0.5, quads: 0.25 }, c: ["dl", "hipthrust"] },
+      { id: "lb2", role: "Squat có tựa lưng", t: "C", s: 3, r: "8–12", m: { quads: 1, hams: 0.5 }, c: ["hack", "legpress", "bss", "smsquat"] },
+      { id: "lb3", role: "Gập gối", t: "I", s: 3, r: "10–12", m: { hams: 1 }, c: ["seatcurl", "legcurl", "dbcurlham", "nordic"] },
+      { id: "lb4", role: "Duỗi gối", t: "I", s: 3, r: "12–15", m: { quads: 1 }, c: ["legext", "legpress"] },
+      { id: "lb5", role: "Bắp chân", t: "I", s: 3, r: "12–15", m: { calves: 1 }, c: ["calfsit", "calfst", "calfdb"] },
+      { id: "lb6", role: "Bụng", t: "I", s: 3, r: "10–15", m: { abs: 1 }, c: ["hlr", "kneeraise", "crunch"] }
     ]}
   };
   var ORDER = ["UA", "LA", "UB", "LB"];
-  // Bài thay thế cùng chuyển động; kế thừa nhóm cơ, khoảng rep của bài gốc
-  var ALTS = {
-    smbench: [["bbbench", "Barbell bench press"], ["machpress", "Chest press máy"]], brow: [["tbar", "T-bar row tựa ngực"], ["dbrow", "DB row 1 tay"]],
-    incdb: [["incsmith", "Incline Smith press"]], latpd: [["apull", "Pull-up máy trợ lực"]], tripd: [["rope", "Rope pushdown"]],
-    dbcurl: [["cablecurl", "Cable curl"], ["hammer", "Hammer curl"]], latraise: [["latmach", "Lateral raise máy"]],
-    squat: [["hack", "Hack squat"], ["smsquat", "Smith squat"]], rdl: [["dbrdl", "DB Romanian deadlift"]], legpress: [["hack2", "Hack squat"]],
-    legcurl: [["seatcurl2", "Seated leg curl"]], calfst: [["calflp", "Calf raise máy đạp đùi"]], crunch: [["abmach", "Ab crunch máy"]],
-    smohp: [["dbohp", "DB shoulder press ngồi"], ["machohp", "Shoulder press máy"]], pullup: [["apull2", "Pull-up máy trợ lực"]],
-    dbbench: [["machpress2", "Chest press máy"]], cablerow: [["machrow", "Row máy tựa ngực"]], latcable: [["latdb", "Lateral raise tạ đơn"]],
-    inccurl: [["preacher", "Preacher curl"]], ohtri: [["dbohtri", "DB triceps qua đầu"]], pecdeck: [["cablefly", "Cable fly"]],
-    dl: [["trapbar", "Trap bar deadlift"]], bss: [["smsplit", "Smith split squat"]], seatcurl: [["lycurl", "Lying leg curl"]],
-    legext: [["legext1", "Leg extension 1 chân"]], calfsit: [["calfst2", "Calf raise đứng"]], hlr: [["kneeraise", "Gập gối trên ghế dips"]]
-  };
-  var EXDB = {};
-  ORDER.forEach(function (k) { PROGRAM[k].ex.forEach(function (e) { EXDB[e.id] = e; }); });
-  Object.keys(ALTS).forEach(function (sid) {
-    ALTS[sid].forEach(function (a) { var s = EXDB[sid]; EXDB[a[0]] = { id: a[0], n: a[1], t: s.t, s: s.s, r: s.r, inc: s.inc, m: s.m, bw: s.bw, q: a[1].toLowerCase() + " form", alt: sid }; });
+  var SLOT = {}, EXDB = {};
+  ORDER.forEach(function (k) {
+    PROGRAM[k].ex.forEach(function (sl) {
+      SLOT[sl.id] = sl;
+      sl.c.forEach(function (id) {
+        if (EXDB[id]) return;
+        var e = EXL[id];
+        EXDB[id] = { id: id, n: e[0], eq: e[1], inc: e[2], q: e[3] + " form", bw: !!e[4], t: sl.t, r: sl.r, m: sl.m };
+      });
+    });
   });
 
   // Thực phẩm theo 100g sống (trừ cơm là cơm chín): kcal, đạm, tinh bột, béo
@@ -153,7 +179,8 @@
       profile: null,          // { sex, age, height, weight, act, rate, pkg, weekly, start, tdee0 }
       plan: null,             // mục tiêu đang dùng { kcal, p, tdee, date }
       checkins: [],           // lịch sử điều chỉnh hằng tuần
-      swaps: {},              // bài gốc -> bài thay thế
+      swaps: {},              // vị trí -> bài bạn chọn
+      equip: { seatcurl: false }, equipSet: false, // dụng cụ phòng tập
       workouts: [],           // { id, date, ts, key, dur, ex: [{ id, sets: [{kg, reps, rir}] }] }, mới nhất trước
       draft: null,            // buổi đang tập
       food: {},               // ngày -> [{ id, n, kcal, p, c, f, base, mul, ts, rid }]
@@ -162,7 +189,16 @@
     };
   }
   function load() {
-    try { var raw = localStorage.getItem(KEY); if (raw) { S = Object.assign(blank(), JSON.parse(raw)); return; } } catch (e) {}
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        S = Object.assign(blank(), JSON.parse(raw));
+        // Bản 3.0 lưu đổi bài theo mã bài cũ; bỏ đi vì giáo án giờ chia theo vị trí
+        Object.keys(S.swaps).forEach(function (k) { if (!SLOT[k]) delete S.swaps[k]; });
+        if (S.draft && S.draft.ex.some(function (e) { return !SLOT[e.slot]; })) S.draft = null;
+        return;
+      }
+    } catch (e) {}
     S = blank();
     // Bắt đầu lại từ đầu: xoá dữ liệu của các bản trước
     try { localStorage.removeItem("so-tap-recomp-app-v1"); } catch (e) {}
@@ -180,7 +216,14 @@
 
   // 1RM ước tính có tính RIR: số rep tối đa làm được = rep + RIR (công thức Epley)
   function e1rm(kg, reps, rir) { return kg > 0 ? kg * (1 + (reps + (rir || 0)) / 30) : 0; }
-  function actualEx(slot) { var a = S.swaps[slot.id]; return a && EXDB[a] ? EXDB[a] : slot; }
+  function hasEq(id) { var e = EXDB[id]; return !!e && (e.eq === "none" || S.equip[e.eq] !== false); }
+  // Bài đang dùng cho một vị trí: bài bạn đã chọn (nếu còn dụng cụ), không thì bài ưu tiên đầu tiên có dụng cụ
+  function actualEx(slot) {
+    var a = S.swaps[slot.id];
+    if (a && slot.c.indexOf(a) >= 0 && hasEq(a)) return EXDB[a];
+    for (var i = 0; i < slot.c.length; i++) if (hasEq(slot.c[i])) return EXDB[slot.c[i]];
+    return EXDB[slot.c[0]];
+  }
   function bestE(sets) { return sets.reduce(function (m, s) { return Math.max(m, e1rm(s.kg, s.reps, s.rir)); }, 0); }
   function hardSets(sets) { return sets.filter(function (s) { return s.reps > 0 && (s.rir == null || s.rir <= 3); }).length; }
   // Lịch sử một bài: mỗi buổi một điểm, cũ trước
@@ -188,7 +231,7 @@
     var out = [];
     for (var i = S.workouts.length - 1; i >= 0; i--) {
       var w = S.workouts[i], e = w.ex.filter(function (x) { return x.id === id; })[0];
-      if (e && e.sets.length) out.push({ date: w.date, sets: e.sets, e: bestE(e.sets) });
+      if (e && e.sets.length) out.push({ date: w.date, sets: e.sets, e: bestE(e.sets), fb: e.fb });
     }
     return out;
   }
@@ -196,6 +239,14 @@
 
   // Gợi ý buổi tới theo tăng tiến kép có RIR:
   // đạt đỉnh khoảng rep ở mọi hiệp mà vẫn còn dư ≥ (RIR mục tiêu − 1) thì tăng tạ; quá nặng thì giảm; còn lại giữ tạ, thêm rep.
+  // Phản hồi sau bài (kiểu RP): đau khớp 1 lần, hoặc không cảm nhận cơ 2 trong 3 buổi gần nhất → nên đổi bài
+  function swapAdvice(slot) {
+    var act = actualEx(slot), h = exHistory(act.id).slice(-3), fbs = h.map(function (x) { return x.fb; });
+    var pain = fbs.length && fbs[fbs.length - 1] === "pain", nofeel = fbs.filter(function (f) { return f === "nofeel"; }).length >= 2;
+    if (!pain && !nofeel) return null;
+    var alt = slot.c.filter(function (id) { return id !== act.id && hasEq(id); })[0];
+    return { why: pain ? "Buổi trước bạn báo đau khớp ở bài này." : "2 buổi gần đây bạn không cảm nhận được cơ.", alt: alt };
+  }
   function suggest(slot) {
     var act = actualEx(slot), rg = range(slot.r), tr = slot.t === "C" ? 2 : 1, last = lastSets(act.id);
     if (!last) return { kg: act.bw ? 0 : null, reps: rg.hi, rir: tr, why: act.bw ? "Lần đầu: làm tới khi còn dư " + tr + " rep." : "Lần đầu: chọn mức tạ làm được khoảng " + rg.hi + " rep mà còn dư " + tr + " rep." };
@@ -313,11 +364,12 @@
     var P = PROGRAM[UI.sel], h = "";
     if (UI.banner) h += '<div class="banner good">' + esc(UI.banner) + "</div>";
     h += '<div class="row between"><span class="label">Tuần này ' + weekCount() + "/" + S.profile.weekly + ' buổi</span><span class="label">Buổi kế tiếp: ' + PROGRAM[nk].name + "</span></div>";
+    if (!S.equipSet) h += '<div class="banner warn"><b>Phòng tập của bạn có gì?</b> Chọn một lần để app chỉ xếp bài bạn làm được. <button class="btn sm dark" data-act="equip" style="margin-top:8px">Chọn dụng cụ</button></div>';
     h += '<div class="seg">' + ORDER.map(function (k) { return '<button aria-pressed="' + (k === UI.sel) + '" data-act="sel" data-v="' + k + '">' + PROGRAM[k].name + "</button>"; }).join("") + "</div>";
     h += '<div class="card"><div class="row between"><h2 class="disp" style="font-size:26px">' + P.name + '</h2><span class="note">' + P.sub + "</span></div><div>";
     P.ex.forEach(function (slot) {
-      var act = actualEx(slot), sg = suggest(slot);
-      h += '<div class="next-ex"><span>' + esc(act.n) + '</span><span>' + slot.s + " × " + (sg.kg != null && sg.kg > 0 ? fmt(sg.kg) + "kg × " + sg.reps : slot.r + " rep") + "</span></div>";
+      var act = actualEx(slot), sg = suggest(slot), adv = swapAdvice(slot);
+      h += '<div class="next-ex"><span>' + esc(act.n) + (adv ? ' <span class="flag">Nên đổi</span>' : "") + (hasEq(act.id) ? "" : ' <span class="flag">Thiếu máy</span>') + '<br><span class="note">' + slot.role + "</span></span><span>" + slot.s + " × " + (sg.kg != null && sg.kg > 0 ? fmt(sg.kg) + "kg × " + sg.reps : slot.r + " rep") + "</span></div>";
     });
     h += '</div><button class="btn" data-act="start">Bắt đầu ' + P.name + "</button></div>";
     var v = volume(shiftKey(todayKey(), -6), todayKey()), low = Object.keys(MUSCLES).filter(function (m) { return v[m] < MUSCLES[m][1]; });
@@ -332,13 +384,15 @@
     });
     S.draft = { key: key, start: Date.now(), ex: ex }; UI.banner = ""; flush(); render(); window.scrollTo(0, 0);
   }
+  var FB = [["ok", "Hợp"], ["meh", "Tạm"], ["pain", "Đau khớp"], ["nofeel", "Không cảm nhận cơ"]];
   function vWorkout() {
     var d = S.draft, P = PROGRAM[d.key], done = 0, total = 0, h = "";
     d.ex.forEach(function (e) { e.sets.forEach(function (s) { total++; if (s.done) done++; }); });
     h += '<div class="wo-head"><div><b class="disp" style="font-size:24px">' + P.name + '</b> <span class="note num" id="elapsed" data-start="' + d.start + '">' + Math.round((Date.now() - d.start) / 60000) + " phút · " + done + "/" + total + ' hiệp</span></div><button class="btn sm dark" data-act="finish">Kết thúc</button></div>';
     d.ex.forEach(function (e, ei) {
-      var ex = EXDB[e.id], all = e.sets.length && e.sets.every(function (s) { return s.done; });
-      h += '<div class="ex' + (all ? " done" : "") + '"><div class="ex-top"><div><div class="ex-name"><a href="https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.q) + '" target="_blank" rel="noopener">' + esc(ex.n) + '</a></div><div class="note">' + ex.r + " rep · RIR mục tiêu " + (ex.t === "C" ? 2 : 1) + '</div></div><button class="link" data-act="swap" data-i="' + ei + '">Đổi bài</button></div>';
+      var ex = EXDB[e.id], sl = SLOT[e.slot] || ex, all = e.sets.length && e.sets.every(function (s) { return s.done; }), adv = SLOT[e.slot] && !e.fb ? swapAdvice(sl) : null;
+      h += '<div class="ex' + (all ? " done" : "") + '"><div class="ex-top"><div><div class="ex-name"><a href="https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.q) + '" target="_blank" rel="noopener">' + esc(ex.n) + '</a></div><div class="note">' + (sl.role ? sl.role + " · " : "") + sl.r + " rep · RIR mục tiêu " + (sl.t === "C" ? 2 : 1) + '</div></div><button class="link" data-act="swap" data-i="' + ei + '">Đổi bài</button></div>';
+      if (adv) h += '<div class="banner warn">' + adv.why + (adv.alt ? ' Nên đổi sang <b>' + esc(EXDB[adv.alt].n) + '</b>. <button class="link" data-act="quickswap" data-i="' + ei + '" data-v="' + adv.alt + '">Đổi ngay</button>' : " Chưa có bài thay thế với dụng cụ bạn có.") + "</div>";
       h += '<div class="target">' + esc(e.why) + "</div>";
       h += '<div class="sets-h"><span></span><span>kg</span><span>Rep</span><span>RIR (còn dư)</span><span></span></div>';
       e.sets.forEach(function (s, si) {
@@ -346,7 +400,9 @@
         h += '<span class="rir">' + [0, 1, 2, 3].map(function (r) { return '<button aria-pressed="' + (s.rir === r) + '" data-act="rir" data-i="' + ei + '" data-j="' + si + '" data-v="' + r + '">' + (r === 3 ? "3+" : r) + "</button>"; }).join("") + "</span>";
         h += '<button class="tick' + (s.done ? " on" : "") + '" data-act="done" data-i="' + ei + '" data-j="' + si + '" aria-label="Xong hiệp">✓</button></div>';
       });
-      h += '<div class="row" style="gap:14px"><button class="link" data-act="addset" data-i="' + ei + '">+ Thêm hiệp</button>' + (e.sets.length > 1 && !e.sets[e.sets.length - 1].done ? '<button class="link" data-act="delset" data-i="' + ei + '">− Bớt hiệp</button>' : "") + "</div></div>";
+      h += '<div class="row" style="gap:14px"><button class="link" data-act="addset" data-i="' + ei + '">+ Thêm hiệp</button>' + (e.sets.length > 1 && !e.sets[e.sets.length - 1].done ? '<button class="link" data-act="delset" data-i="' + ei + '">− Bớt hiệp</button>' : "") + "</div>";
+      if (all) h += '<div class="fb"><span class="note">Bài này thế nào?</span><div class="chips">' + FB.map(function (f) { return '<button class="chip" aria-pressed="' + (e.fb === f[0]) + '" data-act="fb" data-i="' + ei + '" data-v="' + f[0] + '">' + f[1] + "</button>"; }).join("") + "</div></div>";
+      h += "</div>";
     });
     h += '<p class="note">RIR = còn làm thêm được mấy rep nữa. Hiệp có RIR từ 0 đến 3 mới được tính là hiệp nặng.</p>';
     h += '<button class="btn ghost" data-act="cancel">Huỷ buổi này</button>';
@@ -362,7 +418,7 @@
       if (prevBest && now > prevBest * 1.001) prs.push(EXDB[e.id].n + " ≈" + fmt(now) + "kg 1RM");
       if (prevSame) { var pe = prevSame.ex.filter(function (x) { return x.id === e.id; })[0]; if (pe && bestE(pe.sets) && now) cmp.push((now / bestE(pe.sets) - 1) * 100); }
       sets.forEach(function (s) { vol += s.kg * s.reps; }); hs += hardSets(sets);
-      ex.push({ id: e.id, sets: sets });
+      ex.push({ id: e.id, slot: e.slot, sets: sets, fb: e.fb || null });
     });
     if (!ex.length) { toast("Chưa có hiệp nào xong. Bấm Huỷ nếu không tập nữa."); return; }
     var dur = Math.round((Date.now() - d.start) / 60000), w = { id: "w" + Date.now(), date: keyOf(new Date(d.start)), ts: d.start, key: d.key, dur: dur, ex: ex };
@@ -674,18 +730,27 @@
   }
   // ---- Đổi bài ----
   function openSwap(ei) {
-    var e = S.draft.ex[ei], slot = EXDB[e.slot], opts = [[slot.id, slot.n]].concat(ALTS[slot.id] || []);
+    var e = S.draft.ex[ei], slot = SLOT[e.slot];
     SH = { kind: "swap", ei: ei };
-    openSheet(head("Đổi bài") + '<p class="note">' + (slot.t === "C" ? "Bài chính nên giữ 4–6 tuần để đo được tiến bộ." : "Bài phụ đổi thoải mái.") + ' Lựa chọn được nhớ cho các buổi sau.</p><div class="list-res">' + opts.map(function (o) { var ls = lastSets(o[0]); return '<button data-act="doswap" data-v="' + o[0] + '"><span>' + esc(o[1]) + (o[0] === e.id ? " ✓" : "") + '</span><span class="k">' + (ls ? "lần trước " + fmt(Math.max.apply(null, ls.sets.map(function (s) { return s.kg; }))) + "kg" : "") + "</span></button>"; }).join("") + "</div>");
+    var h = head("Đổi bài") + '<p class="note">Vị trí: <b>' + slot.role + "</b>. Bài xếp theo ưu tiên. " + (slot.t === "C" ? "Bài chính nên giữ 4–6 tuần để đo được tiến bộ." : "Bài phụ đổi thoải mái.") + " Lựa chọn được nhớ cho các buổi sau.</p><div class=\"list-res\">";
+    slot.c.forEach(function (id) {
+      var ok = hasEq(id), ls = lastSets(id);
+      h += '<button data-act="doswap" data-v="' + id + '"' + (ok ? "" : " disabled") + "><span>" + esc(EXDB[id].n) + (id === e.id ? " ✓" : "") + '</span><span class="k">' + (!ok ? "không có máy" : ls ? "lần trước " + fmt(Math.max.apply(null, ls.sets.map(function (s) { return s.kg; }))) + "kg" : "") + "</span></button>";
+    });
+    return openSheet(h + '</div><button class="link" data-act="equip">Sửa danh sách dụng cụ</button>');
+  }
+  function openEquip() {
+    SH = { kind: "equip" };
+    openSheet(head("Dụng cụ phòng tập") + '<p class="note">Bỏ chọn những thứ phòng bạn không có. App sẽ tự chọn bài thay thế phù hợp.</p><div class="eqlist">' + EQUIP.map(function (q) { return '<label class="eq"><input type="checkbox" data-eq="' + q[0] + '"' + (S.equip[q[0]] !== false ? " checked" : "") + "><span>" + q[1] + "</span></label>"; }).join("") + '</div><button class="btn" data-act="saveequip">Lưu</button>');
   }
   // ---- Cài đặt ----
   function openSettings() {
     SH = { kind: "settings" };
     var lb = S.lastBackup;
-    openSheet(head("Cài đặt") + '<button class="btn ghost" data-act="profile">Hồ sơ và mục tiêu</button>' +
+    openSheet(head("Cài đặt") + '<div class="grid2"><button class="btn ghost" data-act="profile">Hồ sơ, mục tiêu</button><button class="btn ghost" data-act="equip">Dụng cụ phòng tập</button></div>' +
       '<div class="card"><h2>Sao lưu</h2><p class="note">Dữ liệu chỉ nằm trên máy này. Sao lưu ra file rồi cất vào Drive hoặc Zalo.' + (lb ? " Lần gần nhất " + new Date(lb).toLocaleDateString("vi-VN") + "." : "") + '</p><div class="grid2"><button class="btn" data-act="backup">Sao lưu</button><button class="btn ghost" data-act="restore">Khôi phục</button></div></div>' +
-      '<div class="card"><h2>Cách app tính</h2><ul style="margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px"><li><b>1RM ước tính</b> = kg × (1 + (rep + RIR) / 30).</li><li><b>Hiệp nặng</b>: hiệp có RIR 0–3. Vùng nên đạt 10–20 hiệp mỗi nhóm cơ lớn mỗi tuần.</li><li><b>Tăng tạ</b> khi đạt đỉnh khoảng rep ở mọi hiệp mà vẫn còn dư rep.</li><li><b>Chững</b>: 3 buổi liền không vượt kỷ lục 1RM cũ.</li><li><b>Cân xu hướng</b>: trung bình trượt, mỗi ngày lấy 10% số cân mới.</li><li><b>TDEE</b> = calo ăn trung bình − thay đổi cân xu hướng × 7.700 kcal/kg, tính trên 3 tuần gần nhất.</li></ul></div>' +
-      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 3.0</p>');
+      '<div class="card"><h2>Cách app tính</h2><ul style="margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px"><li><b>1RM ước tính</b> = kg × (1 + (rep + RIR) / 30).</li><li><b>Hiệp nặng</b>: hiệp có RIR 0–3. Vùng nên đạt 10–20 hiệp mỗi nhóm cơ lớn mỗi tuần.</li><li><b>Tăng tạ</b> khi đạt đỉnh khoảng rep ở mọi hiệp mà vẫn còn dư rep.</li><li><b>Chững</b>: 3 buổi liền không vượt kỷ lục 1RM cũ.</li><li><b>Chọn bài</b>: mỗi vị trí trong giáo án có vài bài xếp theo ưu tiên; app lấy bài đầu tiên bạn có dụng cụ. Báo đau khớp, hoặc 2/3 buổi không cảm nhận cơ, thì app khuyên đổi bài.</li><li><b>Cân xu hướng</b>: trung bình trượt, mỗi ngày lấy 10% số cân mới.</li><li><b>TDEE</b> = calo ăn trung bình − thay đổi cân xu hướng × 7.700 kcal/kg, tính trên 3 tuần gần nhất.</li></ul></div>' +
+      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 3.1</p>');
   }
 
   // =====================================================================
@@ -728,6 +793,9 @@
     else if (a === "finish") finishWorkout();
     else if (a === "cancel") { if (b.getAttribute("data-armed")) { S.draft = null; stopTimer(); flush(); render(); toast("Đã huỷ buổi tập"); } else { b.setAttribute("data-armed", "1"); b.textContent = "Bấm lần nữa để huỷ, mọi hiệp sẽ mất"; } }
     else if (a === "rir") { S.draft.ex[i].sets[j].rir = +v; save(); render(); }
+    else if (a === "fb") { S.draft.ex[i].fb = v; save(); render(); if (v === "pain" || v === "nofeel") toast(v === "pain" ? "Đã ghi. Buổi sau app sẽ đề xuất bài thay thế." : "Đã ghi. Nếu lặp lại, app sẽ đề xuất đổi bài."); }
+    else if (a === "quickswap") { doSwap(i, v); }
+    else if (a === "equip") openEquip();
     else if (a === "done") {
       var ex = S.draft.ex[i], s = ex.sets[j], E = EXDB[ex.id];
       if (!s.done) {
@@ -803,11 +871,14 @@
     else if (a === "addrecipe") { var R = RMAP[SH.rid], c = recipeCalc(R, SH.rice); addFood(UI.date, { n: R.n + " (cơm " + SH.rice + "g)", kcal: c.kcal, p: c.p, c: c.c, f: c.f, rid: R.id }); closeSheet(); render(); toast("Đã ghi " + R.n + ": " + c.kcal + " kcal"); }
     else if (a === "mul") { var m = findFood(SH.id), x = +v, base = m.base || { kcal: m.kcal, p: m.p, c: m.c, f: m.f }; m.base = base; m.mul = x; m.kcal = Math.round(base.kcal * x); m.p = Math.round(base.p * x * 10) / 10; m.c = Math.round(base.c * x * 10) / 10; m.f = Math.round(base.f * x * 10) / 10; flush(); render(); reSheet(editHtml()); }
     else if (a === "delfood") { S.food[UI.date] = dayFood(UI.date).filter(function (mm) { return mm.id !== SH.id; }); flush(); closeSheet(); render(); toast("Đã xoá"); }
-    else if (a === "doswap") {
-      var ex = S.draft.ex[SH.ei], slot = EXDB[ex.slot];
-      if (v === slot.id) delete S.swaps[slot.id]; else S.swaps[slot.id] = v;
-      var sg = suggest(slot); ex.id = v; ex.why = sg.why; ex.sets = ex.sets.map(function () { return { kg: sg.kg == null ? "" : sg.kg, reps: sg.reps, rir: sg.rir, done: false }; });
-      flush(); closeSheet(); render(); toast("Đã đổi sang " + EXDB[v].n);
+    else if (a === "doswap") { doSwap(SH.ei, v); closeSheet(); }
+    else if (a === "equip") openEquip();
+    else if (a === "saveequip") {
+      sb.querySelectorAll("input[data-eq]").forEach(function (x) { S.equip[x.getAttribute("data-eq")] = x.checked; });
+      S.equipSet = true;
+      // Bài đang tập dở mà không còn dụng cụ thì đổi sang bài có dụng cụ
+      if (S.draft) S.draft.ex.forEach(function (e, k) { if (!hasEq(e.id) && !e.sets.some(function (s2) { return s2.done; })) doSwap(k, actualEx(SLOT[e.slot]).id, true); });
+      flush(); closeSheet(); render(); toast("Đã lưu dụng cụ");
     }
     else if (a === "savewaist") { var wa = num(document.getElementById("waIn").value); if (!(wa >= 40 && wa <= 200)) { toast("Nhập vòng bụng bằng cm"); return; } S.waist[todayKey()] = wa; flush(); closeSheet(); render(); }
     else if (a === "backup") backup();
@@ -818,6 +889,14 @@
     if (e.target.id !== "fq") return;
     SH.q = e.target.value; SH.pick = null; document.getElementById("fres").innerHTML = searchRes();
   });
+
+  function doSwap(ei, id, silent) {
+    var ex = S.draft.ex[ei], slot = SLOT[ex.slot];
+    if (id === slot.c.filter(hasEq)[0]) delete S.swaps[slot.id]; else S.swaps[slot.id] = id;
+    var sg = suggest(slot); ex.id = id; ex.why = sg.why; ex.fb = null;
+    ex.sets = ex.sets.map(function () { return { kg: sg.kg == null ? "" : sg.kg, reps: sg.reps, rir: sg.rir, done: false }; });
+    flush(); render(); if (!silent) toast("Đã đổi sang " + EXDB[id].n);
+  }
 
   // ---- Sao lưu ----
   function backup() {
