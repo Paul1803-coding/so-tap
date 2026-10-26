@@ -365,3 +365,10 @@ body.has-timer .toast { bottom: calc(var(--nav-h) + 92px + env(safe-area-inset-b
 .mchips { display: flex; gap: 6px; flex-wrap: wrap; }
 .mchips button { border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 99px; padding: 6px 11px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .mchips button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+/* v4.3: đổi thứ tự bài */
+.exmv { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.exmv .chip { font-size: 12px; padding: 5px 10px; }
+.exmv .arr { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.exmv .arr button { border: 0; background: var(--surface); color: var(--fg); width: 38px; height: 30px; font-size: 16px; font-weight: 700; }
+.exmv .arr button + button { border-left: 1px solid var(--line); }
+.exmv .arr button:disabled { opacity: .3; }
