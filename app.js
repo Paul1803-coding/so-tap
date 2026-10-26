@@ -46,14 +46,15 @@
   // Giáo án Upper/Lower xoay vòng, chia theo vị trí. c: các bài cho vị trí đó, xếp theo ưu tiên; app lấy bài đầu tiên có dụng cụ.
   // m: hiệp tính cho nhóm cơ (1 = cơ chính, 0,5 = cơ phụ).
   var PROGRAM = {
-    UA: { name: "Upper A", sub: "Ngực, lưng làm chính", ex: [
+    // Mỗi buổi Upper có một chủ đề: A là ngực + lưng dày, phụ tay sau; B là vai + lưng rộng, phụ tay trước.
+    // Bài đẩy và kéo xen kẽ để nhóm này làm thì nhóm kia nghỉ; ép ngực xếp trước tay sau để tay sau đỡ mỏi.
+    UA: { name: "Upper A", sub: "Ngực, lưng dày · tay sau", ex: [
       { id: "ua1", role: "Đẩy ngang", t: "C", s: 3, r: "6–8", m: { chest: 1, triceps: 0.5, delts: 0.5 }, c: ["smbench", "bbbench", "dbbench", "machpress"] },
       { id: "ua2", role: "Kéo ngang", t: "C", s: 3, r: "8–10", m: { back: 1, biceps: 0.5 }, c: ["brow", "machrow", "cablerow", "dbrow"] },
       { id: "ua3", role: "Đẩy dốc lên", t: "C", s: 3, r: "8–12", m: { chest: 1, delts: 0.5, triceps: 0.5 }, c: ["incdb", "incsmith", "incbb"] },
       { id: "ua4", role: "Kéo dọc", t: "C", s: 3, r: "10–12", m: { back: 1, biceps: 0.5 }, c: ["latpd", "chinup"] },
-      { id: "ua5", role: "Tay sau", t: "I", s: 3, r: "10–15", m: { triceps: 1 }, c: ["tripd", "ohtri", "dbohtri", "skull"] },
-      { id: "ua6", role: "Tay trước", t: "I", s: 3, r: "10–15", m: { biceps: 1 }, c: ["dbcurl", "cablecurl", "ezcurl"] },
-      { id: "ua7", role: "Vai giữa", t: "I", s: 3, r: "12–15", m: { delts: 1 }, c: ["latraise", "latcable", "latmach"] }
+      { id: "ua8", role: "Ép ngực", t: "I", s: 4, r: "12–15", m: { chest: 1 }, c: ["pecdeck", "cablefly", "dbfly"] },
+      { id: "ua5", role: "Tay sau", t: "I", s: 3, r: "10–15", m: { triceps: 1 }, c: ["tripd", "ohtri", "dbohtri", "skull"] }
     ]},
     LA: { name: "Lower A", sub: "Squat làm chính", ex: [
       { id: "la1", role: "Squat", t: "C", s: 3, r: "6–8", m: { quads: 1, hams: 0.5 }, c: ["squat", "hack", "smsquat", "goblet"] },
@@ -63,15 +64,12 @@
       { id: "la5", role: "Bắp chân", t: "I", s: 3, r: "12–15", m: { calves: 1 }, c: ["calfst", "calflp", "calfsm", "calfdb"] },
       { id: "la6", role: "Bụng", t: "I", s: 3, r: "12–15", m: { abs: 1 }, c: ["crunch", "abmach", "kneeraise"] }
     ]},
-    UB: { name: "Upper B", sub: "Vai, xô làm chính", ex: [
+    UB: { name: "Upper B", sub: "Vai, lưng rộng · tay trước", ex: [
       { id: "ub1", role: "Đẩy dọc", t: "C", s: 3, r: "6–10", m: { delts: 1, triceps: 0.5 }, c: ["smohp", "dbohp", "machohp"] },
       { id: "ub2", role: "Kéo dọc", t: "C", s: 3, r: "6–10", m: { back: 1, biceps: 0.5 }, c: ["pullup", "chinup", "latpd"] },
-      { id: "ub3", role: "Đẩy ngang", t: "C", s: 3, r: "8–12", m: { chest: 1, triceps: 0.5, delts: 0.5 }, c: ["dbbench", "machpress", "bbbench", "smbench"] },
       { id: "ub4", role: "Kéo ngang", t: "C", s: 3, r: "10–12", m: { back: 1, biceps: 0.5 }, c: ["cablerow", "machrow", "dbrow"] },
       { id: "ub5", role: "Vai giữa", t: "I", s: 3, r: "12–15", m: { delts: 1 }, c: ["latcable", "latraise", "latmach"] },
-      { id: "ub6", role: "Tay trước (cơ duỗi dài)", t: "I", s: 3, r: "10–15", m: { biceps: 1 }, c: ["inccurl", "cablecurl", "dbcurl"] },
-      { id: "ub7", role: "Tay sau qua đầu", t: "I", s: 3, r: "10–15", m: { triceps: 1 }, c: ["ohtri", "dbohtri", "skull"] },
-      { id: "ub8", role: "Ép ngực", t: "I", s: 3, r: "12–15", m: { chest: 1 }, c: ["pecdeck", "cablefly", "dbfly"] }
+      { id: "ub6", role: "Tay trước (cơ duỗi dài)", t: "I", s: 3, r: "10–15", m: { biceps: 1 }, c: ["inccurl", "cablecurl", "dbcurl"] }
     ]},
     LB: { name: "Lower B", sub: "Deadlift làm chính", ex: [
       { id: "lb1", role: "Gập hông nặng", t: "C", s: 3, r: "4–6", m: { hams: 1, back: 0.5, quads: 0.25 }, c: ["dl", "hipthrust"] },
@@ -83,9 +81,17 @@
     ]}
   };
   var ORDER = ["UA", "LA", "UB", "LB"];
+  // Vị trí đã bỏ ở bản 4.6 (Upper bớt bài): giữ lại để lịch sử, bài đã đổi và buổi đang tập dở vẫn đọc được
+  var RETIRED = [
+      { id: "ua6", role: "Tay trước", t: "I", s: 3, r: "10–15", m: { biceps: 1 }, c: ["dbcurl", "cablecurl", "ezcurl"] },
+      { id: "ua7", role: "Vai giữa", t: "I", s: 3, r: "12–15", m: { delts: 1 }, c: ["latraise", "latcable", "latmach"] },
+      { id: "ub3", role: "Đẩy ngang", t: "C", s: 3, r: "8–12", m: { chest: 1, triceps: 0.5, delts: 0.5 }, c: ["dbbench", "machpress", "bbbench", "smbench"] },
+      { id: "ub7", role: "Tay sau qua đầu", t: "I", s: 3, r: "10–15", m: { triceps: 1 }, c: ["ohtri", "dbohtri", "skull"] },
+      { id: "ub8", role: "Ép ngực", t: "I", s: 3, r: "12–15", m: { chest: 1 }, c: ["pecdeck", "cablefly", "dbfly"] }
+  ];
   var SLOT = {}, EXDB = {};
-  ORDER.forEach(function (k) {
-    PROGRAM[k].ex.forEach(function (sl) {
+  ORDER.map(function (k) { return PROGRAM[k].ex; }).concat([RETIRED]).forEach(function (list) {
+    list.forEach(function (sl) {
       SLOT[sl.id] = sl;
       sl.c.forEach(function (id) {
         if (EXDB[id]) return;
@@ -501,7 +507,7 @@
     if (list.length) h += '<div class="clist">' + list.slice(0, 6).map(function (c) {
       var C = CARDIO[c.type]; return '<div class="crow"><button class="cmain" data-act="editcardio" data-v="' + c.id + '"><span class="ic">' + C.ic + '</span><span class="t"><b>' + C.n + '</b><span class="note">' + friendly(c.date) + " · " + c.min + " phút · " + esc(cardioDesc(c)) + '</span></span><span class="k num">' + int(c.kcal) + ' kcal</span></button><button class="x" data-act="delcardio" data-v="' + c.id + '" aria-label="Xoá">×</button></div>';
     }).join("") + "</div>";
-    else h += '<p class="empty">Chưa ghi buổi nào. Đánh cầu xong bấm "+ Ghi".</p>';
+    else h += '<p class="empty">Chưa ghi buổi nào. Đánh cầu xong bấm nút 🏸 ở trên.</p>';
     h += '<details class="cinfo"><summary>Lịch cardio của bạn và cách tính</summary><ul>' +
       "<li><b>Cầu lông 1 buổi/tuần</b> là phần cardio chính. 2–3 tiếng đánh căng đã vượt mức WHO khuyên (75–150 phút vận động mạnh mỗi tuần).</li>" +
       "<li><b>Thêm " + LIGHT_GOAL + " buổi cardio nhẹ</b> 20–30 phút (đi bộ dốc hoặc elliptical) để tăng sức bền và đốt thêm mà ít ảnh hưởng tới tăng cơ. Cường độ: nói được thành câu nhưng không hát được, nhịp tim khoảng " + z[0] + "–" + z[1] + " nhịp/phút.</li>" +
@@ -1146,7 +1152,7 @@
       '<div class="card"><h2>Sao lưu</h2><p class="note">Dữ liệu chỉ nằm trên máy này. Sao lưu ra file rồi cất vào Drive hoặc Zalo.' + (lb ? " Lần gần nhất " + new Date(lb).toLocaleDateString("vi-VN") + "." : "") + '</p><div class="grid2"><button class="btn" data-act="backup">Sao lưu</button><button class="btn ghost" data-act="restore">Khôi phục</button></div></div>' +
       '<div class="card"><h2>Cách app tính</h2><ul style="margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px"><li><b>1RM ước tính</b> = kg × (1 + (rep + RIR) / 30).</li><li><b>Hiệp nặng</b>: hiệp có RIR 0–3. Vùng nên đạt 10–20 hiệp mỗi nhóm cơ lớn mỗi tuần.</li><li><b>Tăng tạ</b> khi đạt đỉnh khoảng rep ở mọi hiệp mà vẫn còn dư rep.</li><li><b>Chững</b>: 3 buổi liền không vượt kỷ lục 1RM cũ.</li><li><b>Chọn bài</b>: mỗi vị trí trong giáo án có vài bài xếp theo ưu tiên; app lấy bài đầu tiên bạn có dụng cụ. Báo đau khớp, hoặc 2/3 buổi không cảm nhận cơ, thì app khuyên đổi bài.</li><li><b>Cân xu hướng</b>: trung bình trượt, mỗi ngày lấy 10% số cân mới.</li><li><b>% mỡ</b>: công thức Hải quân Mỹ từ vòng bụng, vòng cổ, chiều cao (nữ thêm vòng hông). Khối mỡ = cân xu hướng × % mỡ, khối nạc = phần còn lại.</li><li><b>TDEE</b> = calo ăn trung bình − thay đổi cân xu hướng × 7.700 kcal/kg, tính trên 3 tuần gần nhất.</li></ul></div>' +
       '<div class="card"><h2>Cơ sở dữ liệu</h2><p class="note">Xem calo, đạm của thực phẩm và lưu ý kỹ thuật từng bài tập.</p><a class="btn ghost" href="du-lieu.html" style="display:block;text-align:center;text-decoration:none">Mở trang dữ liệu</a></div>' +
-      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 4.5</p>');
+      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 4.6</p>');
   }
 
   // =====================================================================
