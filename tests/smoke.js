@@ -51,6 +51,8 @@ function check(ok, msg) { console.log((ok ? "  ✓ " : "  ✗ ") + msg); if (!ok
   await p.click("[data-act=sel][data-v=UB]");
   var ub = await p.evaluate(function () { return [].map.call(document.querySelectorAll(".next-ex .note"), function (e) { return e.textContent; }).join(" → "); });
   check(ub === "Đẩy dọc → Kéo dọc → Đẩy vai tạ đơn → Kéo ngang → Vai giữa → Tay trước (cơ duỗi dài)", "Upper B: 2 bài đẩy vai xen kẽ bài kéo, không có đẩy ngực");
+  await p.click("[data-act=sel][data-v=LA]");
+  check(/Vai giữa/.test(await p.textContent(".card")), "Lower A có bay vai cuối buổi");
   await p.close();
 
   console.log("Cardio");

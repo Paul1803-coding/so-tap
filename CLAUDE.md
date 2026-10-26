@@ -8,7 +8,7 @@ App PWA ghi tập gym, ăn uống, cardio cho **một người dùng duy nhất*
 - Với tính năng lớn: **đọc tài liệu chuyên môn trước, hỏi điểm cần chốt, rồi làm một lần**. Nêu nguồn khi đưa số liệu khoa học.
 - Không dùng AI trả phí, không gửi dữ liệu đi đâu.
 - Mục tiêu: recomp (giảm mỡ, giữ/tăng cơ). Đo bằng thước dây và cân thường.
-- Tập tạ 4 buổi/tuần Upper/Lower (đã cân nhắc PPL và chọn giữ U/L), **ngày không cố định**, tập buổi tối. Mỗi buổi Upper theo chủ đề: A ngực + lưng dày, phụ ép ngực, tay sau; B vai + lưng rộng (2 bài đẩy vai: Smith rồi tạ đơn, theo ý người dùng), phụ bay vai, tay trước. Không để buổi quá dài: tay sau, tay trước cuối buổi dài là không tập nổi. Phòng tập **không có leg curl ngồi**; leg press sau RDL làm mỏi lưng dưới.
+- Tập tạ 4 buổi/tuần Upper/Lower (đã cân nhắc PPL và chọn giữ U/L), **ngày không cố định**, tập buổi tối. Mỗi buổi Upper theo chủ đề: A ngực + lưng dày, phụ ép ngực, tay sau; B vai + lưng rộng (2 bài đẩy vai: Smith rồi tạ đơn, theo ý người dùng), phụ bay vai (4 hiệp), tay trước. Lower A có thêm 3 hiệp bay vai cuối buổi để vai giữa tập 2 lần/tuần. Không để buổi quá dài: tay sau, tay trước cuối buổi dài là không tập nổi. Phòng tập **không có leg curl ngồi**; leg press sau RDL làm mỏi lưng dưới.
 - Cầu lông 1 buổi/tuần (thứ 7 hoặc CN), 2–3 tiếng, đánh căng. Có máy chạy bộ chỉnh dốc và elliptical.
 - Ăn: sáng mua ngoài (bánh mì, xôi), trưa cơm căng tin, tối tự nấu. **Không ăn cá.** Đạm chính: bò, lợn, gà, trứng; cơm, rau tuỳ ý; gia vị sả, gừng, tỏi…
 - Calo mục tiêu giữ nguyên mỗi ngày (không ăn bù calo cardio).
