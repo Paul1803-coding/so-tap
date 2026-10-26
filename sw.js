@@ -1,11 +1,13 @@
 // Bộ nhớ đệm để app mở được khi không có mạng.
 // Đổi VERSION mỗi lần cập nhật app để điện thoại tải bản mới.
-var VERSION = "fitcore-v10";
+var VERSION = "fitcore-v11";
 var SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./db.js",
+  "./du-lieu.html",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FitCore Dữ liệu</title>
+<meta name="theme-color" content="#EFEFEA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111315" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { padding-bottom: 40px; }
+  .dbw { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+  .dbh { display: flex; align-items: baseline; justify-content: space-between; padding: 18px 0 6px; }
+  .dbh a { color: var(--muted); font-size: 14px; }
+  .dbin { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+  textarea.dbin { min-height: 74px; resize: vertical; }
+  .pr { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .pr:last-child { border-bottom: 0; }
+  .pr b { font-weight: 600; }
+  .pr small, .mut { color: var(--muted); font-size: 13px; }
+  .num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .tot { display: flex; gap: 18px; margin-top: 10px; padding-top: 10px; border-top: 2px solid var(--fg); }
+  .tot div { flex: 1; }
+  .tot strong { display: block; font-family: "Barlow Condensed", sans-serif; font-size: 26px; }
+  .bad { color: var(--accent-ink, var(--accent)); }
+  .fi { padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .fi .top2 { display: flex; justify-content: space-between; gap: 10px; }
+  .un { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+  .un span { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--surface-2, var(--bg)); color: var(--muted); }
+  .cue { margin: 6px 0 0 18px; padding: 0; font-size: 14px; }
+  .cue li { margin: 2px 0; }
+  .ghead { font-family: "Barlow Condensed", sans-serif; font-size: 20px; margin: 18px 0 2px; text-transform: uppercase; letter-spacing: .02em; }
+  .chips2 { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0 2px; scrollbar-width: none; }
+  .chips2 button { flex: none; font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+  .chips2 button.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .ex-eq { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="dbw">
+  <div class="dbh"><h1 class="brand">Fit<span>Core</span> · Dữ liệu</h1><a href="./">← Về app</a></div>
+  <div class="seg" id="tabs"><button data-t="food" aria-pressed="true">Thực phẩm</button><button data-t="ex" aria-pressed="false">Bài tập</button></div>
+  <div id="out"></div>
+</div>
+<script src="db.js"></script>
+<script>
+(function () {
+  "use strict";
+  var D = window.FitDB, tab = "food", grp = "", q = "", mus = "";
+  var EX_TRY = "150g ức gà, 1 chén cơm, 2 quả trứng, nửa tô phở";
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function r1(x) { return Math.round(x * 10) / 10; }
+  function unitTxt(f, u) { return u.n + " ≈ " + u.g + (f.liquid ? "ml" : "g"); }
+
+  function parseHtml(txt) {
+    var rows = D.parse(txt), t = { kcal: 0, p: 0, c: 0, f: 0 }, h = "";
+    rows.forEach(function (r) {
+      if (!r.ok) { h += '<div class="pr"><span class="bad">"' + esc(r.text) + '": chưa có trong dữ liệu</span></div>'; return; }
+      ["kcal", "p", "c", "f"].forEach(function (k) { t[k] += r.r[k]; });
+      var amt = (r.unit.g === 1 || r.unit.g === 1000 || r.unit.n === "lang") ? r.grams + (r.food.liquid ? "ml" : "g") : r1(r.qty) + " " + r.unit.n + " ≈ " + r.grams + (r.food.liquid ? "ml" : "g");
+      h += '<div class="pr"><div><b>' + esc(r.food.n) + '</b><br><small>' + esc(amt) + '</small></div><div class="num">' + r.r.kcal + ' kcal<br><small>' + r.r.p + 'g đạm</small></div></div>';
+    });
+    if (!rows.length) return '<p class="mut">Gõ món bạn ăn, ví dụ: ' + EX_TRY + '</p>';
+    return h + '<div class="tot"><div><span class="mut">Calo</span><strong>' + Math.round(t.kcal) + '</strong></div><div><span class="mut">Đạm</span><strong>' + r1(t.p) + 'g</strong></div><div><span class="mut">Tinh bột</span><strong>' + r1(t.c) + 'g</strong></div><div><span class="mut">Béo</span><strong>' + r1(t.f) + 'g</strong></div></div>';
+  }
+
+  function foodList() {
+    var list = q ? D.search(q, 40) : D.FOODS.filter(function (f) { return !grp || f.g === grp; });
+    if (!list.length) return '<p class="mut" style="padding:12px 0">Không thấy món nào.</p>';
+    return list.map(function (f) {
+      return '<div class="fi"><div class="top2"><b>' + esc(f.n) + '</b><span class="num">' + f.kcal + ' kcal · ' + f.p + 'g đạm</span></div>' +
+        '<div class="mut">' + (f.liquid ? "100ml" : "100g") + ': tinh bột ' + f.c + 'g · béo ' + f.f + 'g</div>' +
+        '<div class="un">' + f.units.map(function (u) { return "<span>" + esc(unitTxt(f, u)) + "</span>"; }).join("") + '</div></div>';
+    }).join("");
+  }
+
+  function renderFood() {
+    var chips = '<button data-g="" class="' + (grp ? "" : "on") + '">Tất cả</button>' + Object.keys(D.GROUPS).map(function (g) {
+      return '<button data-g="' + g + '" class="' + (grp === g ? "on" : "") + '">' + D.GROUPS[g] + '</button>';
+    }).join("");
+    return '<section class="card"><h2>Thử nhập bữa ăn</h2><p class="mut">Gõ như nói chuyện, cách nhau bằng dấu phẩy. Không ghi lượng thì lấy 1 phần thường gặp.</p>' +
+      '<textarea class="dbin" id="try" placeholder="' + EX_TRY + '">' + EX_TRY + '</textarea><div id="res">' + parseHtml(EX_TRY) + '</div></section>' +
+      '<section class="card"><h2>' + D.FOODS.length + ' thực phẩm</h2><input class="dbin" id="q" placeholder="Tìm: bò, cơm tấm, sữa chua…" value="' + esc(q) + '">' +
+      '<div class="chips2" id="grp">' + chips + '</div><div id="fl">' + foodList() + '</div>' +
+      '<p class="mut" style="margin-top:12px">Thực phẩm thô lấy gần đúng theo Bảng thành phần thực phẩm Việt Nam và USDA. Món nấu sẵn ước tính theo khẩu phần phổ biến nên có thể lệch 15–25%. Thịt cá ghi rõ sống hay chín, vì nấu chín mất nước nên 100g chín nhiều đạm hơn 100g sống.</p></section>';
+  }
+
+  function renderEx() {
+    var chips = '<button data-m="" class="' + (mus ? "" : "on") + '">Tất cả</button>' + Object.keys(D.MUSCLES).map(function (m) {
+      return '<button data-m="' + m + '" class="' + (mus === m ? "on" : "") + '">' + D.MUSCLES[m] + '</button>';
+    }).join("");
+    var h = "";
+    Object.keys(D.MUSCLES).forEach(function (m) {
+      if (mus && mus !== m) return;
+      var list = D.EXERCISES.filter(function (e) { return e.main === m; });
+      if (!list.length) return;
+      h += '<div class="ghead">' + D.MUSCLES[m] + ' · ' + list.length + ' bài</div>';
+      h += list.map(function (e) {
+        var sec = Object.keys(e.m).filter(function (k) { return e.m[k] < 1; }).map(function (k) { return D.MUSCLES[k]; });
+        return '<div class="fi"><div class="top2"><b>' + esc(e.n) + '</b><span class="mut">' + D.PATTERNS[e.pat] + '</span></div>' +
+          '<div class="ex-eq">' + D.EQUIP[e.eq] + (sec.length ? ' · phụ: ' + sec.join(", ") : '') + (e.bw ? ' · tạ cơ thể' : ' · tăng ' + String(e.inc).replace(".", ",") + 'kg') + '</div>' +
+          '<ul class="cue">' + e.cues.map(function (c) { return "<li>" + esc(c) + "</li>"; }).join("") + '</ul>' +
+          '<a class="mut" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=' + encodeURIComponent(e.en + " form") + '">Xem video mẫu ↗</a></div>';
+      }).join("");
+    });
+    return '<section class="card"><h2>' + D.EXERCISES.length + ' bài tập</h2><p class="mut">Mỗi bài có cơ chính, cơ phụ (tính ½ hiệp), dụng cụ, bước tăng tạ và lưu ý kỹ thuật.</p>' +
+      '<div class="chips2" id="mus">' + chips + '</div>' + h + '</section>';
+  }
+
+  var out = document.getElementById("out");
+  function render() { out.innerHTML = tab === "food" ? renderFood() : renderEx(); }
+  document.getElementById("tabs").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    tab = b.dataset.t; [].forEach.call(this.children, function (x) { x.setAttribute("aria-pressed", x === b); }); render();
+  });
+  out.addEventListener("input", function (e) {
+    if (e.target.id === "try") document.getElementById("res").innerHTML = parseHtml(e.target.value);
+    if (e.target.id === "q") { q = e.target.value; document.getElementById("fl").innerHTML = foodList(); }
+  });
+  out.addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.g != null) { grp = b.dataset.g; q = ""; render(); }
+    if (b.dataset.m != null) { mus = b.dataset.m; render(); }
+  });
+  render();
+})();
+</script>
+</body>
+</html>
