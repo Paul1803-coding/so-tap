@@ -252,3 +252,12 @@ details.card[open] summary::after { content: " –"; }
 .mrow .k b { display: block; }
 .mrow .k span { font-size: 12px; color: var(--accent-ink); font-weight: 600; }
 .mrow.miss { color: var(--accent-ink); font-size: 14px; }
+.amt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gin { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 0 8px 0 0; }
+.gin input { width: 64px; border: 0; background: transparent; font: inherit; font-weight: 600; font-size: 16px; text-align: right; padding: 6px 0 6px 6px; color: var(--fg); font-variant-numeric: tabular-nums; }
+.gin input:focus { outline: none; }
+.gin:focus-within { border-color: var(--accent); }
+.gin i { font-style: normal; font-size: 13px; color: var(--muted); }
+.step.sm button { width: 32px; height: 34px; font-size: 18px; }
+.ing .gin { margin-left: auto; }
+.ing div { align-items: center; }

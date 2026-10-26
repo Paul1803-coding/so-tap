@@ -793,12 +793,15 @@
     rows.forEach(function (r, i) {
       if (!r.ok) { h2 += '<div class="mrow miss"><span>"' + esc(r.text) + '" chưa có trong dữ liệu, sẽ bỏ qua. Đồ đóng gói thì dùng Nhập số.</span></div>'; return; }
       var name = r.opts.length > 1 ? '<select data-i="' + i + '" aria-label="Chọn đúng món">' + r.opts.map(function (f) { return '<option value="' + f.id + '"' + (f.id === r.food.id ? " selected" : "") + ">" + esc(f.n) + "</option>"; }).join("") + "</select>" : "<b>" + esc(r.food.n) + "</b>";
-      var amt = r.food.noG ? fmt(r.grams / 100) + " gói" : (r.unit && SH.adj[i] == null ? fmt(r.qty) + " " + r.unit.n + " ≈ " : "") + r.grams + (r.food.liquid ? "ml" : "g");
-      h2 += '<div class="mrow"><div class="mn">' + name + '<span class="s">' + esc(amt) + '</span></div><span class="step"><button data-act="pg" data-i="' + i + '" data-d="-1" aria-label="Bớt">−</button><button data-act="pg" data-i="' + i + '" data-d="1" aria-label="Thêm">+</button></span><span class="k"><b>' + r.r.kcal + "</b><span>" + fmt(r.r.p) + "g đạm</span></span></div>";
+      var hint = !r.food.noG && r.unit && SH.adj[i] == null ? fmt(r.qty) + " " + r.unit.n : "";
+      h2 += '<div class="mrow"><div class="mn">' + name + '<span class="amt">' + gIn('data-gi="' + i + '"', r.food.noG ? r.grams / 100 : r.grams, r.food.noG ? "gói" : r.food.liquid ? "ml" : "g") + (hint ? '<span class="s">' + esc(hint) + "</span>" : "") + '</span></div><span class="step sm"><button data-act="pg" data-i="' + i + '" data-d="-1" aria-label="Bớt">−</button><button data-act="pg" data-i="' + i + '" data-d="1" aria-label="Thêm">+</button></span><span class="k" id="mk' + i + '">' + kCell(r.r) + "</span></div>";
     });
-    var t = mealSum(rows);
-    return h2 + '</div><div class="stick">' + totals(t) + '<p class="note num" style="margin:0">Tinh bột ' + int(t.c) + "g · béo " + int(t.f) + 'g. Số gần đúng, món nấu ở quán có thể lệch 15–25%.</p><button class="btn" data-act="addmeal"' + (t.kcal ? "" : " disabled") + ">Thêm</button></div>";
+    return h2 + '</div><div class="stick" id="mtot">' + mealTot(mealSum(rows)) + "</div>";
   }
+  // Ô nhập lượng: gõ số thật bất kỳ, − / + chỉ để chỉnh nhanh
+  function gIn(attr, val, unit) { return '<span class="gin"><input ' + attr + ' inputmode="decimal" value="' + fmt(Math.round(val * 10) / 10) + '" aria-label="Lượng"><i>' + unit + "</i></span>"; }
+  function kCell(r) { return "<b>" + int(r.kcal) + "</b><span>" + fmt(Math.round(r.p * 10) / 10) + "g đạm</span>"; }
+  function mealTot(t) { return totals(t) + '<p class="note num" style="margin:0">Tinh bột ' + int(t.c) + "g · béo " + int(t.f) + 'g. Số gần đúng, món nấu ở quán có thể lệch 15–25%.</p><button class="btn" data-act="addmeal"' + (t.kcal ? "" : " disabled") + ">Thêm</button>"; }
   function mealItem() {
     var rows = mealRows().filter(function (r) { return r.ok; }), t = mealSum(rows), txt = SH.q.trim().replace(/\s+/g, " ");
     t.n = txt.charAt(0).toUpperCase() + txt.slice(1); t.parts = rows.map(function (r) { return { id: r.food.id, g: r.grams }; });
@@ -835,22 +838,42 @@
   }
   function openRecipe(id) {
     if (SH.kind !== "add") SH = { kind: "add", view: "search", q: "", ov: {}, adj: {}, segs: [] };
-    SH.view = "recipe"; SH.rid = id; SH.rice = riceFor(RMAP[id], dinnerBudget(UI.date).kcal);
+    SH.view = "recipe"; SH.rid = id; SH.rice = riceFor(RMAP[id], dinnerBudget(UI.date).kcal); SH.ing = RMAP[id].ing.map(function (x) { return [x[0], x[1]]; });
     if (sheet.hidden) openSheet(addHtml()); else { reSheet(addHtml()); sb.scrollTop = 0; }
   }
   function recipeHtml() {
-    var r = RMAP[SH.rid], c = recipeCalc(r, SH.rice), h = head(esc(r.n));
-    h += '<div class="ing">' + r.ing.map(function (x) { return "<div><span>" + ING[x[0]][0] + '</span><b class="num">' + x[1] + "g</b></div>"; }).join("") + '<div><span>Cơm chín</span><span class="step"><button data-act="rice" data-d="-10" aria-label="Bớt cơm">−</button><b class="num">' + SH.rice + 'g</b><button data-act="rice" data-d="10" aria-label="Thêm cơm">+</button></span></div></div>';
+    var r = RMAP[SH.rid], c = recipeCalc({ ing: SH.ing }, SH.rice), h = head(esc(r.n));
+    h += '<p class="note">Số gợi ý sẵn, nấu thực tế bao nhiêu thì sửa lại cho đúng.</p><div class="ing">' + SH.ing.map(function (x, i) { return "<div><span>" + ING[x[0]][0] + "</span>" + gIn('data-ri="' + i + '"', x[1], "g") + "</div>"; }).join("") + "<div><span>Cơm chín</span>" + gIn('data-ri="rice"', SH.rice, "g") + "</div></div>";
     h += '<p class="note">Thịt cá cân lúc còn sống. 100g cơm chín ≈ ⅔ chén.</p><ol class="steps">' + r.steps.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") + '</ol><p class="tip">' + esc(r.tip) + "</p>";
-    return h + '<div class="stick">' + totals(c) + '<button class="btn" data-act="addrecipe">Đã ăn món này</button></div>';
+    return h + '<div class="stick"><div id="rtot">' + totals(c) + '</div><button class="btn" data-act="addrecipe">Đã ăn món này</button></div>';
   }
   // ---- Sửa món ----
   var MULS = [0.5, 0.75, 1, 1.25, 1.5, 2];
   function findFood(id) { return dayFood(UI.date).filter(function (m) { return m.id === id; })[0]; }
-  function openEdit(id) { SH = { kind: "edit", id: id }; openSheet(editHtml()); }
+  function foodById(id) { return FitDB.FOODS.filter(function (f) { return f.id === id; })[0]; }
+  function openEdit(id) {
+    var m = findFood(id), eg = null;
+    // Món ghi theo thành phần: sửa gram từng thứ (cần tra được hết trong dữ liệu)
+    if (m.parts && m.parts.every(function (x) { return foodById(x.id); })) eg = m.parts.map(function (x) { return { food: foodById(x.id), g: x.g }; });
+    SH = { kind: "edit", id: id, eg: eg }; openSheet(editHtml());
+  }
   function editHtml() {
     var m = findFood(SH.id), mul = m.mul || 1;
-    return head("Sửa món") + "<p><b>" + esc(m.n) + '</b></p><p class="label">Ăn nhiều hay ít hơn?</p><div class="seg">' + MULS.map(function (x) { return '<button aria-pressed="' + (x === mul) + '" data-act="mul" data-v="' + x + '">×' + fmt(x) + "</button>"; }).join("") + "</div>" + totals(m) + '<button class="btn ghost" data-act="delfood">Xoá món này</button>';
+    var h = head("Sửa món") + "<p><b>" + esc(m.n) + "</b></p>";
+    if (SH.eg) {
+      h += '<p class="label">Lượng từng thứ</p><div class="meal">' + SH.eg.map(function (x, i) {
+        return '<div class="mrow"><div class="mn"><b>' + esc(x.food.n) + '</b><span class="amt">' + gIn('data-ei="' + i + '"', x.food.noG ? x.g / 100 : x.g, x.food.noG ? "gói" : x.food.liquid ? "ml" : "g") + '</span></div><span class="k" id="ek' + i + '">' + kCell(FitDB.calc(x.food, x.g)) + "</span></div>";
+      }).join("") + '</div><div id="etot">' + totals(editSum()) + "</div>";
+    } else {
+      var b0 = m.base || m;
+      h += '<p class="label">Ăn nhiều hay ít hơn?</p><div class="seg">' + MULS.map(function (x) { return '<button aria-pressed="' + (x === mul) + '" data-act="mul" data-v="' + x + '">×' + fmt(x) + "</button>"; }).join("") + "</div>" +
+        '<p class="label">Hoặc sửa số trực tiếp</p><div class="grid2"><label class="field">Calo (kcal)<input id="eK" inputmode="decimal" value="' + int(m.kcal) + '"></label><label class="field">Đạm (g)<input id="eP" inputmode="decimal" value="' + fmt(m.p) + '"></label></div>';
+      SH.b0 = b0;
+    }
+    return h + '<button class="btn" data-act="saveedit">Lưu</button><button class="btn ghost" data-act="delfood">Xoá món này</button>';
+  }
+  function editSum() {
+    return SH.eg.reduce(function (a, x) { var r = FitDB.calc(x.food, x.g); a.kcal += r.kcal; a.p += r.p; a.c += r.c; a.f += r.f; return a; }, { kcal: 0, p: 0, c: 0, f: 0 });
   }
   // ---- Đổi bài ----
   function openSwap(ei) {
@@ -875,7 +898,7 @@
       '<div class="card"><h2>Sao lưu</h2><p class="note">Dữ liệu chỉ nằm trên máy này. Sao lưu ra file rồi cất vào Drive hoặc Zalo.' + (lb ? " Lần gần nhất " + new Date(lb).toLocaleDateString("vi-VN") + "." : "") + '</p><div class="grid2"><button class="btn" data-act="backup">Sao lưu</button><button class="btn ghost" data-act="restore">Khôi phục</button></div></div>' +
       '<div class="card"><h2>Cách app tính</h2><ul style="margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px"><li><b>1RM ước tính</b> = kg × (1 + (rep + RIR) / 30).</li><li><b>Hiệp nặng</b>: hiệp có RIR 0–3. Vùng nên đạt 10–20 hiệp mỗi nhóm cơ lớn mỗi tuần.</li><li><b>Tăng tạ</b> khi đạt đỉnh khoảng rep ở mọi hiệp mà vẫn còn dư rep.</li><li><b>Chững</b>: 3 buổi liền không vượt kỷ lục 1RM cũ.</li><li><b>Chọn bài</b>: mỗi vị trí trong giáo án có vài bài xếp theo ưu tiên; app lấy bài đầu tiên bạn có dụng cụ. Báo đau khớp, hoặc 2/3 buổi không cảm nhận cơ, thì app khuyên đổi bài.</li><li><b>Cân xu hướng</b>: trung bình trượt, mỗi ngày lấy 10% số cân mới.</li><li><b>% mỡ</b>: công thức Hải quân Mỹ từ vòng bụng, vòng cổ, chiều cao (nữ thêm vòng hông). Khối mỡ = cân xu hướng × % mỡ, khối nạc = phần còn lại.</li><li><b>TDEE</b> = calo ăn trung bình − thay đổi cân xu hướng × 7.700 kcal/kg, tính trên 3 tuần gần nhất.</li></ul></div>' +
       '<div class="card"><h2>Cơ sở dữ liệu</h2><p class="note">Xem calo, đạm của thực phẩm và lưu ý kỹ thuật từng bài tập.</p><a class="btn ghost" href="du-lieu.html" style="display:block;text-align:center;text-decoration:none">Mở trang dữ liệu</a></div>' +
-      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 3.5</p>');
+      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 3.6</p>');
   }
 
   // =====================================================================
@@ -1000,9 +1023,22 @@
       addFood(UI.date, { n: label, kcal: R0.kcal, p: R0.p, c: R0.c, f: R0.f }); closeSheet(); render(); toast("Đã thêm " + int(R0.kcal) + " kcal · " + fmt(Math.round(R0.p * 10) / 10) + "g đạm");
     }
     else if (a === "recipe") openRecipe(v);
-    else if (a === "rice") { SH.rice = clamp(SH.rice + +b.getAttribute("data-d"), 0, 400); reSheet(addHtml()); }
-    else if (a === "addrecipe") { var R = RMAP[SH.rid], c = recipeCalc(R, SH.rice); addFood(UI.date, { n: R.n + " (cơm " + SH.rice + "g)", kcal: c.kcal, p: c.p, c: c.c, f: c.f, rid: R.id }); closeSheet(); render(); toast("Đã ghi " + R.n + ": " + c.kcal + " kcal"); }
-    else if (a === "mul") { var m = findFood(SH.id), x = +v, base = m.base || { kcal: m.kcal, p: m.p, c: m.c, f: m.f }; m.base = base; m.mul = x; m.kcal = Math.round(base.kcal * x); m.p = Math.round(base.p * x * 10) / 10; m.c = Math.round(base.c * x * 10) / 10; m.f = Math.round(base.f * x * 10) / 10; flush(); render(); reSheet(editHtml()); }
+    else if (a === "addrecipe") { var R = RMAP[SH.rid], c = recipeCalc({ ing: SH.ing }, SH.rice); addFood(UI.date, { n: R.n + " (cơm " + SH.rice + "g)", kcal: c.kcal, p: c.p, c: c.c, f: c.f, rid: R.id }); closeSheet(); render(); toast("Đã ghi " + R.n + ": " + c.kcal + " kcal"); }
+    else if (a === "mul") { var x = +v, bb = SH.b0; SH.mul = x; document.getElementById("eK").value = int(bb.kcal * x); document.getElementById("eP").value = fmt(Math.round(bb.p * x * 10) / 10); sb.querySelectorAll('[data-act="mul"]').forEach(function (q) { q.setAttribute("aria-pressed", q === b); }); }
+    else if (a === "saveedit") {
+      var m = findFood(SH.id);
+      if (SH.eg) {
+        var es = editSum(); m.kcal = Math.round(es.kcal); m.p = Math.round(es.p * 10) / 10; m.c = Math.round(es.c * 10) / 10; m.f = Math.round(es.f * 10) / 10;
+        m.parts = SH.eg.map(function (q) { return { id: q.food.id, g: q.g }; }); m.base = { kcal: m.kcal, p: m.p, c: m.c, f: m.f }; m.mul = 1;
+      } else {
+        var ek = num(document.getElementById("eK").value), ep = num(document.getElementById("eP").value);
+        if (ek == null) { toast("Nhập số calo"); return; }
+        var bb2 = SH.b0, ratio = bb2.kcal ? ek / bb2.kcal : 1;
+        m.kcal = Math.round(ek); m.p = ep == null ? 0 : Math.round(ep * 10) / 10; m.c = Math.round((bb2.c || 0) * ratio * 10) / 10; m.f = Math.round((bb2.f || 0) * ratio * 10) / 10;
+        if (!m.base) m.base = bb2; m.mul = Math.round(ratio * 100) / 100;
+      }
+      flush(); closeSheet(); render(); toast("Đã lưu: " + int(m.kcal) + " kcal · " + fmt(m.p) + "g đạm");
+    }
     else if (a === "delfood") { S.food[UI.date] = dayFood(UI.date).filter(function (mm) { return mm.id !== SH.id; }); flush(); closeSheet(); render(); toast("Đã xoá"); }
     else if (a === "doswap") { doSwap(SH.ei, v); closeSheet(); }
     else if (a === "equip") openEquip();
@@ -1029,9 +1065,28 @@
   });
   sheet.addEventListener("input", function (e) {
     if (e.target.id === "nSave") { SH.nsave = e.target.checked; return; }
+    var t = e.target, gv = num(t.value); if (gv == null || gv < 0) gv = 0;
+    if (t.hasAttribute("data-gi")) {
+      var gi = +t.getAttribute("data-gi"), rows = mealRows(); SH.adj[gi] = rows[gi].food.noG ? gv * 100 : gv;
+      rows = mealRows(); document.getElementById("mk" + gi).innerHTML = kCell(rows[gi].r); document.getElementById("mtot").innerHTML = mealTot(mealSum(rows)); return;
+    }
+    if (t.hasAttribute("data-ei")) {
+      var ei = +t.getAttribute("data-ei"), it = SH.eg[ei]; it.g = it.food.noG ? gv * 100 : gv;
+      document.getElementById("ek" + ei).innerHTML = kCell(FitDB.calc(it.food, it.g)); document.getElementById("etot").innerHTML = totals(editSum()); return;
+    }
+    if (t.hasAttribute("data-ri")) {
+      var ri = t.getAttribute("data-ri"); if (ri === "rice") SH.rice = gv; else SH.ing[+ri][1] = gv;
+      document.getElementById("rtot").innerHTML = totals(recipeCalc({ ing: SH.ing }, SH.rice)); return;
+    }
     if (SH.view === "num" && e.target.id) { SH.nv = SH.nv || {}; SH.nv[e.target.id] = e.target.value; var nr = document.getElementById("nres"); if (nr) nr.innerHTML = numRes(); return; }
     if (e.target.id !== "fq") return;
     SH.q = e.target.value; document.getElementById("fres").innerHTML = searchRes();
+  });
+  // Bấm vào ô số thì chọn sẵn cả số để gõ đè
+  sheet.addEventListener("focusin", function (e) {
+    var t = e.target; if (!t.closest || !t.closest(".gin")) return;
+    var v0 = t.value; try { t.select(); } catch (er) {}
+    setTimeout(function () { if (t.value === v0) try { t.setSelectionRange(0, v0.length); } catch (er) {} }, 0); // Safari trên iPhone
   });
   sheet.addEventListener("change", function (e) {
     var i = e.target.getAttribute("data-i"); if (i == null || e.target.tagName !== "SELECT") return;
