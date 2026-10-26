@@ -345,15 +345,21 @@
     var nk = nextKey(); if (!UI.sel) UI.sel = nk;
     var P = PROGRAM[UI.sel], h = "";
     if (UI.banner) h += '<div class="banner good">' + esc(UI.banner) + "</div>";
-    h += '<div class="row between"><span class="label">Tuần này ' + weekCount() + "/" + S.profile.weekly + ' buổi</span><span class="label">Buổi kế tiếp: ' + PROGRAM[nk].name + "</span></div>";
+    var ws = weekStart(new Date()), tk = todayKey(), dots = "";
+    for (var di = 0; di < 7; di++) {
+      var dk = keyOf(addDays(ws, di)), wo = S.workouts.filter(function (w) { return w.date === dk; })[0];
+      dots += '<span class="wd' + (wo ? " on" : "") + (dk === tk ? " today" : "") + '"><i>' + (wo ? PROGRAM[wo.key].name.replace(/[a-z ]/g, "") : "") + "</i>" + WD[(di + 1) % 7] + "</span>";
+    }
+    var mins = P.ex.reduce(function (a, sl) { return a + sl.s * (sl.t === "C" ? 3 : 2); }, 0);
+    h += '<div class="hero-t"><div class="row between"><span class="eyebrow">' + (UI.sel === nk ? "Buổi kế tiếp" : "Xem trước") + '</span><span class="eyebrow">Tuần này ' + weekCount() + "/" + S.profile.weekly + '</span></div><div class="ht-name">' + P.name + '</div><div class="ht-sub">' + P.sub + " · " + P.ex.length + " bài · khoảng " + Math.round(mins / 5) * 5 + ' phút</div><div class="week">' + dots + '</div><button class="btn light" data-act="start">Bắt đầu ' + P.name + "</button></div>";
     if (!S.equipSet) h += '<div class="banner warn"><b>Phòng tập của bạn có gì?</b> Chọn một lần để app chỉ xếp bài bạn làm được. <button class="btn sm dark" data-act="equip" style="margin-top:8px">Chọn dụng cụ</button></div>';
     h += '<div class="seg">' + ORDER.map(function (k) { return '<button aria-pressed="' + (k === UI.sel) + '" data-act="sel" data-v="' + k + '">' + PROGRAM[k].name + "</button>"; }).join("") + "</div>";
-    h += '<div class="card"><div class="row between"><h2 class="disp" style="font-size:26px">' + P.name + '</h2><span class="note">' + P.sub + "</span></div><div>";
+    h += '<div class="card"><div class="row between"><h2>Các bài hôm nay</h2><span class="note">bộ × kg × rep</span></div><div>';
     P.ex.forEach(function (slot) {
       var act = actualEx(slot), sg = suggest(slot), adv = swapAdvice(slot);
       h += '<div class="next-ex"><span>' + esc(act.n) + (adv ? ' <span class="flag">Nên đổi</span>' : "") + (hasEq(act.id) ? "" : ' <span class="flag">Thiếu máy</span>') + '<br><span class="note">' + slot.role + "</span></span><span>" + slot.s + " × " + (sg.kg != null && sg.kg > 0 ? fmt(sg.kg) + "kg × " + sg.reps : slot.r + " rep") + "</span></div>";
     });
-    h += '</div><button class="btn" data-act="start">Bắt đầu ' + P.name + "</button></div>";
+    h += "</div></div>";
     var v = volume(shiftKey(todayKey(), -6), todayKey()), low = Object.keys(MUSCLES).filter(function (m) { return v[m] < MUSCLES[m][1]; });
     if (S.workouts.length) h += '<p class="note">7 ngày qua còn thiếu hiệp ở: ' + (low.length ? low.map(function (m) { return MUSCLES[m][0].toLowerCase(); }).join(", ") : "không nhóm nào") + '. Xem chi tiết ở mục Tiến độ.</p>';
     return h;
@@ -421,32 +427,38 @@
   // =====================================================================
   // ĂN
   // =====================================================================
+  function ring(pct, size, stroke, cls, inner) {
+    var r = (size - stroke) / 2, c = 2 * Math.PI * r, v = clamp(pct, 0, 1);
+    return '<div class="ring ' + cls + '" style="width:' + size + "px;height:" + size + 'px"><svg viewBox="0 0 ' + size + " " + size + '" aria-hidden="true"><circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" stroke-width="' + stroke + '" class="tr"/><circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" stroke-width="' + stroke + '" class="fg" stroke-dasharray="' + c + '" stroke-dashoffset="' + c * (1 - v) + '" transform="rotate(-90 ' + size / 2 + " " + size / 2 + ')"/></svg><div class="in">' + inner + "</div></div>";
+  }
+  var MEALS = [["s", "Bữa sáng", "☀️"], ["t", "Bữa trưa", "🍱"], ["c", "Bữa phụ", "🍌"], ["d", "Bữa tối", "🌙"]];
+  function mealName(m) { return MEALS.filter(function (x) { return x[0] === m; })[0][1]; }
+  // Bữa của món: người dùng chọn thì theo đó, món cũ chưa có thì đoán theo giờ ghi
+  function mealOf(m) { if (m.meal) return m.meal; return mealByTime(new Date(m.ts)); }
+  function mealByTime(d) { var x = d.getHours() * 60 + d.getMinutes(); return x < 630 ? "s" : x < 870 ? "t" : x < 1050 ? "c" : "d"; }
   function vFood() {
     var k = UI.date, t = S.plan, s = daySum(k), lk = t.kcal - s.kcal, lp = t.p - s.p, h = "";
+    var fT = Math.round(t.kcal * 0.27 / 9), cT = Math.max(0, Math.round((t.kcal - t.p * 4 - fT * 9) / 4));
     h += '<div class="datebar"><button class="icon" data-act="prev" aria-label="Ngày trước">‹</button><span class="d">' + friendly(k) + '</span><button class="icon" data-act="next" aria-label="Ngày sau"' + (k >= todayKey() ? " disabled" : "") + ">›</button></div>";
-    h += '<div class="card"><div class="left"><div class="stat"><span class="label">' + (lk >= 0 ? "Còn" : "Vượt") + ' calo</span><b class="num' + (lk < 0 ? " down" : "") + '">' + int(Math.abs(lk)) + '</b><span class="note num">' + int(s.kcal) + " / " + int(t.kcal) + ' kcal</span><div class="bar' + (lk < 0 ? " over" : "") + '"><i style="width:' + clamp(s.kcal / t.kcal * 100, 0, 100) + '%"></i></div></div>';
-    h += '<div class="stat"><span class="label">' + (lp > 0 ? "Còn" : "Đủ") + ' đạm</span><b class="num' + (lp <= 0 ? " up" : "") + '">' + (lp > 0 ? int(lp) + "g" : "✓") + '</b><span class="note num">' + int(s.p) + " / " + t.p + ' g</span><div class="bar p"><i style="width:' + clamp(s.p / t.p * 100, 0, 100) + '%"></i></div></div></div></div>';
+    var mac = function (lab, v, tg, cls) { return '<div class="mac"><div class="row between"><span>' + lab + '</span><span class="num"><b>' + int(v) + "</b> / " + int(tg) + 'g</span></div><div class="bar ' + cls + '"><i style="width:' + clamp(v / tg * 100, 0, 100) + '%"></i></div></div>'; };
+    h += '<div class="hero-f card">' + ring(s.kcal / t.kcal, 132, 12, lk < 0 ? "over" : "", '<b class="num">' + int(Math.abs(lk)) + "</b><span>" + (lk >= 0 ? "kcal còn lại" : "kcal vượt") + "</span>") +
+      '<div class="macs">' + mac("Đạm", s.p, t.p, "p") + mac("Tinh bột", s.c, cT, "c") + mac("Béo", s.f, fT, "f") + '<p class="note num">Đã ăn ' + int(s.kcal) + " / " + int(t.kcal) + " kcal" + (lp <= 0 ? " · đủ đạm ✓" : "") + "</p></div></div>";
     if (k === todayKey()) {
       var w = S.weight[k];
       h += '<div class="weigh"><span class="label" style="flex:1">Cân sáng nay</span>' + (w != null ? '<b class="num">' + fmt(w) + ' kg</b><button class="link" data-act="clearw">Sửa</button>' : '<input id="wIn" inputmode="decimal" placeholder="kg" aria-label="Cân nặng sáng nay"><button class="btn sm dark" data-act="savew">Lưu</button>') + "</div>";
     }
     var list = dayFood(k).slice().sort(function (a, b) { return a.ts - b.ts; });
-    h += '<div class="card"><div class="row between"><h2>Đã ăn</h2><span class="note">Bấm món để sửa</span></div>';
-    if (!list.length) h += '<p class="empty">Chưa ghi gì. Bấm "+ Thêm món".</p>';
-    var last = null;
-    list.forEach(function (m) {
-      var tm = new Date(m.ts), ml = mealOf(tm);
-      if (ml !== last) {
-        var sub = list.filter(function (x) { return mealOf(new Date(x.ts)) === ml; }).reduce(function (a, x) { a.k += x.kcal; a.p += x.p; return a; }, { k: 0, p: 0 });
-        h += '<div class="meal-h"><span>' + ml + '</span><span class="num">' + int(sub.k) + " kcal · " + int(sub.p) + "g đạm</span></div>"; last = ml;
-      }
-      h += '<button class="food-row" data-act="edit" data-v="' + m.id + '"><span class="t"><b>' + esc(m.n) + (m.mul && m.mul !== 1 ? " ×" + fmt(m.mul) : "") + '</b><span class="s">' + pad(tm.getHours()) + ":" + pad(tm.getMinutes()) + '</span></span><span class="k"><b>' + int(m.kcal) + "</b><span>" + fmt(m.p) + "g đạm</span></span></button>";
+    MEALS.forEach(function (M) {
+      var items = list.filter(function (m) { return mealOf(m) === M[0]; }), sub = items.reduce(function (a, x) { a.k += x.kcal; a.p += x.p; return a; }, { k: 0, p: 0 });
+      h += '<div class="mcard' + (items.length ? "" : " empty") + '"><div class="mhead"><span class="ic">' + M[2] + '</span><div class="mt"><b>' + M[1] + "</b>" + (items.length ? '<span class="note num">' + int(sub.k) + " kcal · " + int(sub.p) + "g đạm</span>" : '<span class="note">Chưa ghi</span>') + '</div><button class="madd" data-act="addto" data-v="' + M[0] + '" aria-label="Thêm vào ' + M[1].toLowerCase() + '">+</button></div>';
+      items.forEach(function (m) {
+        h += '<button class="food-row" data-act="edit" data-v="' + m.id + '"><span class="t"><b>' + esc(m.n) + (m.mul && m.mul !== 1 ? " ×" + fmt(m.mul) : "") + '</b></span><span class="k"><b>' + int(m.kcal) + "</b><span>" + fmt(m.p) + "g đạm</span></span></button>";
+      });
+      h += "</div>";
     });
-    h += "</div>";
     if (k === todayKey()) h += dinnerCard(k);
     return h;
   }
-  function mealOf(d) { var m = d.getHours() * 60 + d.getMinutes(); return m < 630 ? "Bữa sáng" : m < 870 ? "Bữa trưa" : m < 1050 ? "Bữa phụ chiều" : "Bữa tối"; }
   function recipeCalc(r, riceG) {
     var k = 0, p = 0, c = 0, f = 0;
     r.ing.concat([["com", riceG]]).forEach(function (x) { var g = ING[x[0]], q = x[1] / 100; k += g[1] * q; p += g[2] * q; c += g[3] * q; f += g[4] * q; });
@@ -479,7 +491,7 @@
     var base = { kcal: Math.round(item.kcal), p: Math.round(item.p * 10) / 10, c: Math.round((item.c || 0) * 10) / 10, f: Math.round((item.f || 0) * 10) / 10 };
     var now = new Date(), d = parseKey(k); d.setHours(now.getHours(), now.getMinutes());
     if (!S.food[k]) S.food[k] = [];
-    S.food[k].push({ id: uid(), n: item.n, kcal: base.kcal, p: base.p, c: base.c, f: base.f, base: base, mul: 1, ts: k === todayKey() ? Date.now() : d.getTime(), rid: item.rid || null, parts: item.parts || null });
+    S.food[k].push({ meal: item.meal || (k === todayKey() ? mealByTime(new Date()) : "t"), id: uid(), n: item.n, kcal: base.kcal, p: base.p, c: base.c, f: base.f, base: base, mul: 1, ts: k === todayKey() ? Date.now() : d.getTime(), rid: item.rid || null, parts: item.parts || null });
     flush();
   }
   // Món quen: ghi nhiều lần trong 30 ngày; món hay ăn vào giờ này được xếp trước
@@ -489,7 +501,7 @@
       if (k < from || k > t) return;
       S.food[k].forEach(function (m) {
         var key = norm(m.n), r = map[key] || (map[key] = { n: m.n, cnt: 0, near: 0, last: 0, base: m.base || m, rid: m.rid });
-        r.cnt++; if (Math.abs(new Date(m.ts).getHours() - hr) <= 2) r.near++; if (m.ts > r.last) { r.last = m.ts; r.base = m.base || m; }
+        r.cnt++; if (SH.meal ? mealOf(m) === SH.meal : Math.abs(new Date(m.ts).getHours() - hr) <= 2) r.near++; if (m.ts > r.last) { r.last = m.ts; r.base = m.base || m; }
       });
     });
     return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return (b.cnt + 2 * b.near) - (a.cnt + 2 * a.near) || b.last - a.last; });
@@ -501,6 +513,7 @@
   function vProgress() {
     var h = "";
     if (UI.banner) h += '<div class="banner good">' + esc(UI.banner) + "</div>";
+    h += progressHero();
     h += reportCard();
     h += bodyCard();
     h += weightCard();
@@ -554,6 +567,18 @@
     var g = p.goalBf || 12, wGoal = last.lm / (1 - g / 100), fatLeft = Math.max(0, last.w - wGoal);
     var rate = wk >= 1.5 && dF / wk < -0.05 ? dF / wk : (p.rate / 100) * last.w * 0.8, weeksLeft = rate < 0 ? fatLeft / -rate : null;
     return { bs: bs, last: last, ref: ref, wk: wk, dF: dF, dL: dL, v: v, cls: cls, goal: g, wGoal: wGoal, fatLeft: fatLeft, weeksLeft: weeksLeft, s4: s4 };
+  }
+  function progressHero() {
+    var a = bodyAnalysis(), tw = trendNow(), ts = trendSeries(), ks = Object.keys(ts), w0 = ks.length ? ts[ks[0]] : tw, d = tw - w0;
+    var h = '<div class="hero-p"><span class="eyebrow">Hành trình</span>';
+    if (a) {
+      var st = a.bs[0].bf, now = a.last.bf, g = a.goal, prog = st > g ? clamp((st - now) / (st - g), 0, 1) : 1;
+      h += '<div class="hp-row"><div><div class="hp-big num">' + fmt(now) + '<small>%</small></div><span class="hp-lab">mỡ cơ thể</span></div><div class="hp-side"><b class="num">' + fmt(tw) + " kg</b><span>" + (d <= 0 ? "" : "+") + fmt(d) + " kg từ đầu</span></div></div>" +
+        '<div class="hp-track"><i style="width:' + Math.max(3, prog * 100) + '%"></i></div><div class="row between hp-ends"><span>Bắt đầu ' + fmt(st) + "%</span><span>Mục tiêu " + g + "%</span></div>";
+    } else {
+      h += '<div class="hp-row"><div><div class="hp-big num">' + fmt(tw) + '<small>kg</small></div><span class="hp-lab">cân xu hướng</span></div><div class="hp-side"><b class="num">' + (d <= 0 ? "" : "+") + fmt(d) + ' kg</b><span>từ đầu</span></div></div><p class="hp-lab">Đo vòng bụng và vòng cổ để xem % mỡ.</p>';
+    }
+    return h + "</div>";
   }
   function bodyCard() {
     var a = bodyAnalysis(), p = S.profile, h = '<div class="card' + (a && a.cls ? " " + a.cls + "-b" : "") + '"><div class="row between"><h2>Thành phần cơ thể</h2><button class="link" data-act="waist">Đo</button></div>';
@@ -768,12 +793,14 @@
       '<p class="note">Calo khởi đầu tính theo công thức Mifflin–St Jeor × mức vận động. Sau 2–3 tuần app thay bằng con số đo từ cơ thể bạn. Đạm 1,6–2,2 g/kg là mức nghiên cứu khuyên dùng khi tập tạ và giảm mỡ.</p><button class="btn" data-act="saveprofile">Lưu</button>');
   }
   // ---- Thêm món ----
-  function openAdd() { SH = { kind: "add", view: "search", q: "", ov: {}, adj: {}, segs: [] }; openSheet(addHtml()); }
+  function defMeal() { return UI.date === todayKey() ? mealByTime(new Date()) : "t"; }
+  function openAdd(meal) { SH = { kind: "add", view: "search", q: "", ov: {}, adj: {}, segs: [], meal: meal || defMeal() }; openSheet(addHtml()); }
+  function mealSeg(cur, act) { return '<div class="seg mseg">' + MEALS.map(function (M) { return '<button aria-pressed="' + (cur === M[0]) + '" data-act="' + act + '" data-v="' + M[0] + '">' + M[2] + " " + M[1].replace("Bữa ", "") + "</button>"; }).join("") + "</div>"; }
   function addHtml() {
     if (SH.view === "num") return numHtml();
     if (SH.view === "recipes") return recipesHtml();
     if (SH.view === "recipe") return recipeHtml();
-    return head("Thêm món") + '<input id="fq" placeholder="vd: xôi, thịt quay, chút rau" value="' + esc(SH.q) + '" autocomplete="off" aria-label="Ăn gì"><p class="note">Ghi từng thứ, cách nhau dấu phẩy. Có thể ghi lượng: 150g gà, 2 quả trứng, 1 chén cơm, nửa tô phở, chút rau.</p>' +
+    return head("Thêm món") + mealSeg(SH.meal, "setmeal") + (UI.date !== todayKey() ? '<p class="note">Đang ghi cho ' + friendly(UI.date).toLowerCase() + ".</p>" : "") + '<input id="fq" placeholder="vd: xôi, thịt quay, chút rau" value="' + esc(SH.q) + '" autocomplete="off" aria-label="Ăn gì"><p class="note">Ghi từng thứ, cách nhau dấu phẩy. Có thể ghi lượng: 150g gà, 2 quả trứng, 1 chén cơm, nửa tô phở, chút rau.</p>' +
       '<div class="qchips">' + QUICK.map(function (x) { return '<button data-act="qadd" data-v="' + x + '">+ ' + x + "</button>"; }).join("") + '</div><div id="fres">' + searchRes() + "</div>";
   }
   var QUICK = ["cơm", "xôi", "bánh mì", "phở", "bún", "ức gà", "thịt lợn", "thịt bò", "cá", "trứng", "đậu phụ", "rau", "sữa chua", "chuối"];
@@ -851,7 +878,7 @@
     return h + '<button class="link" data-act="view" data-v="search">‹ Quay lại</button>';
   }
   function openRecipe(id) {
-    if (SH.kind !== "add") SH = { kind: "add", view: "search", q: "", ov: {}, adj: {}, segs: [] };
+    if (SH.kind !== "add") SH = { kind: "add", view: "search", q: "", ov: {}, adj: {}, segs: [], meal: "d" };
     SH.view = "recipe"; SH.rid = id; SH.rice = riceFor(RMAP[id], dinnerBudget(UI.date).kcal); SH.ing = RMAP[id].ing.map(function (x) { return [x[0], x[1]]; });
     if (sheet.hidden) openSheet(addHtml()); else { reSheet(addHtml()); sb.scrollTop = 0; }
   }
@@ -873,7 +900,7 @@
   }
   function editHtml() {
     var m = findFood(SH.id), mul = m.mul || 1;
-    var h = head("Sửa món") + "<p><b>" + esc(m.n) + "</b></p>";
+    var h = head("Sửa món") + "<p><b>" + esc(m.n) + '</b></p><p class="label">Bữa</p>' + mealSeg(mealOf(m), "movemeal");
     if (SH.eg) {
       h += '<p class="label">Lượng từng thứ</p><div class="meal">' + SH.eg.map(function (x, i) {
         return '<div class="mrow"><div class="mn"><b>' + esc(x.food.n) + '</b><span class="amt">' + gIn('data-ei="' + i + '"', x.food.noG ? x.g / 100 : x.g, x.food.noG ? "gói" : x.food.liquid ? "ml" : "g") + '</span></div><span class="k" id="ek' + i + '">' + kCell(FitDB.calc(x.food, x.g)) + "</span></div>";
@@ -912,7 +939,7 @@
       '<div class="card"><h2>Sao lưu</h2><p class="note">Dữ liệu chỉ nằm trên máy này. Sao lưu ra file rồi cất vào Drive hoặc Zalo.' + (lb ? " Lần gần nhất " + new Date(lb).toLocaleDateString("vi-VN") + "." : "") + '</p><div class="grid2"><button class="btn" data-act="backup">Sao lưu</button><button class="btn ghost" data-act="restore">Khôi phục</button></div></div>' +
       '<div class="card"><h2>Cách app tính</h2><ul style="margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px"><li><b>1RM ước tính</b> = kg × (1 + (rep + RIR) / 30).</li><li><b>Hiệp nặng</b>: hiệp có RIR 0–3. Vùng nên đạt 10–20 hiệp mỗi nhóm cơ lớn mỗi tuần.</li><li><b>Tăng tạ</b> khi đạt đỉnh khoảng rep ở mọi hiệp mà vẫn còn dư rep.</li><li><b>Chững</b>: 3 buổi liền không vượt kỷ lục 1RM cũ.</li><li><b>Chọn bài</b>: mỗi vị trí trong giáo án có vài bài xếp theo ưu tiên; app lấy bài đầu tiên bạn có dụng cụ. Báo đau khớp, hoặc 2/3 buổi không cảm nhận cơ, thì app khuyên đổi bài.</li><li><b>Cân xu hướng</b>: trung bình trượt, mỗi ngày lấy 10% số cân mới.</li><li><b>% mỡ</b>: công thức Hải quân Mỹ từ vòng bụng, vòng cổ, chiều cao (nữ thêm vòng hông). Khối mỡ = cân xu hướng × % mỡ, khối nạc = phần còn lại.</li><li><b>TDEE</b> = calo ăn trung bình − thay đổi cân xu hướng × 7.700 kcal/kg, tính trên 3 tuần gần nhất.</li></ul></div>' +
       '<div class="card"><h2>Cơ sở dữ liệu</h2><p class="note">Xem calo, đạm của thực phẩm và lưu ý kỹ thuật từng bài tập.</p><a class="btn ghost" href="du-lieu.html" style="display:block;text-align:center;text-decoration:none">Mở trang dữ liệu</a></div>' +
-      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 3.7</p>');
+      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 4.0</p>');
   }
 
   // =====================================================================
@@ -944,7 +971,7 @@
   // =====================================================================
   document.getElementById("nav").addEventListener("click", function (e) { var b = e.target.closest("[data-tab]"); if (!b) return; UI.tab = b.getAttribute("data-tab"); UI.banner = ""; if (UI.tab === "food") UI.date = todayKey(); render(); window.scrollTo(0, 0); });
   document.getElementById("gear").addEventListener("click", function () { if (S.profile) openSettings(); else openProfile(); });
-  fab.addEventListener("click", openAdd);
+  fab.addEventListener("click", function () { openAdd(); });
 
   view.addEventListener("click", function (e) {
     var b = e.target.closest("[data-act]"); if (!b || b.tagName === "INPUT" || b.tagName === "SELECT") return;
@@ -980,7 +1007,8 @@
     else if (a === "clearw") { delete S.weight[todayKey()]; flush(); render(); }
     else if (a === "edit") openEdit(v);
     else if (a === "recipe") openRecipe(v);
-    else if (a === "allrecipes") { openAdd(); SH.view = "recipes"; reSheet(addHtml()); }
+    else if (a === "addto") openAdd(v);
+    else if (a === "allrecipes") { openAdd("d"); SH.view = "recipes"; reSheet(addHtml()); }
     else if (a === "waist") openMeasure();
     else if (a === "toclaude") shareClaude();
     else if (a === "recalc") { var r = estimateTDEE(), np = planFrom(r.tdee), old = S.plan.kcal; S.checkins.unshift({ date: todayKey(), tdee: np.tdee, est: r.est, kcal: np.kcal, p: np.p, from: old }); S.plan = np; flush(); UI.banner = "Mục tiêu mới: " + int(np.kcal) + " kcal (" + (np.kcal >= old ? "+" : "") + int(np.kcal - old) + "), " + np.p + "g đạm."; render(); }
@@ -1018,10 +1046,12 @@
     }
     else if (a === "profile") openProfile();
     else if (a === "view") { SH.view = v; reSheet(addHtml()); }
+    else if (a === "setmeal") { SH.meal = v; sb.querySelectorAll('[data-act="setmeal"]').forEach(function (q) { q.setAttribute("aria-pressed", q === b); }); var fr0 = document.getElementById("fres"); if (fr0 && !SH.q.trim()) fr0.innerHTML = searchRes(); }
+    else if (a === "movemeal") { var mm0 = findFood(SH.id); mm0.meal = v; flush(); render(); sb.querySelectorAll('[data-act="movemeal"]').forEach(function (q) { q.setAttribute("aria-pressed", q === b); }); toast("Đã chuyển sang " + mealName(v).toLowerCase()); }
     else if (a === "qadd") { var fq = document.getElementById("fq"); SH.q = (SH.q.trim() ? SH.q.replace(/[\s,]+$/, "") + ", " : "") + v; fq.value = SH.q; document.getElementById("fres").innerHTML = searchRes(); }
     else if (a === "pg") { var i = +b.getAttribute("data-i"), row = mealRows()[i]; SH.adj[i] = clamp(row.grams + +b.getAttribute("data-d") * gStep(row.food), 0, 2000); document.getElementById("fres").innerHTML = searchRes(); }
-    else if (a === "addmeal") { var ml = mealItem(); if (!ml.kcal) return; addFood(UI.date, ml); closeSheet(); render(); toast("Đã thêm " + int(ml.kcal) + " kcal · " + fmt(ml.p) + "g đạm"); }
-    else if (a === "fr") { var fr = SH.fr[+v]; addFood(UI.date, { n: fr.n, kcal: fr.base.kcal, p: fr.base.p, c: fr.base.c, f: fr.base.f, rid: fr.rid }); closeSheet(); render(); toast("Đã thêm " + fr.n); }
+    else if (a === "addmeal") { var ml = mealItem(); if (!ml.kcal) return; ml.meal = SH.meal; addFood(UI.date, ml); closeSheet(); render(); toast("Đã thêm " + int(ml.kcal) + " kcal · " + fmt(ml.p) + "g đạm"); }
+    else if (a === "fr") { var fr = SH.fr[+v]; addFood(UI.date, { n: fr.n, kcal: fr.base.kcal, p: fr.base.p, c: fr.base.c, f: fr.base.f, rid: fr.rid, meal: SH.meal }); closeSheet(); render(); toast("Đã thêm " + fr.n); }
     else if (a === "nb") { SH.nb = v; reSheet(addHtml()); }
     else if (a === "addnum") {
       var nv = SH.nv || {}, nn = (nv.nN || "").trim(), R0 = numVals();
@@ -1035,10 +1065,10 @@
         S.custom = (S.custom || []).filter(function (x) { return x.id !== cid; }).concat([cu]); FitDB.addCustom(cu);
       }
       var label = nn + " (" + (R0.per ? fmt(R0.eat) + "g" : fmt(R0.eat) + " gói") + ")";
-      addFood(UI.date, { n: label, kcal: R0.kcal, p: R0.p, c: R0.c, f: R0.f }); closeSheet(); render(); toast("Đã thêm " + int(R0.kcal) + " kcal · " + fmt(Math.round(R0.p * 10) / 10) + "g đạm");
+      addFood(UI.date, { n: label, kcal: R0.kcal, p: R0.p, c: R0.c, f: R0.f, meal: SH.meal }); closeSheet(); render(); toast("Đã thêm " + int(R0.kcal) + " kcal · " + fmt(Math.round(R0.p * 10) / 10) + "g đạm");
     }
     else if (a === "recipe") openRecipe(v);
-    else if (a === "addrecipe") { var R = RMAP[SH.rid], c = recipeCalc({ ing: SH.ing }, SH.rice); addFood(UI.date, { n: R.n + " (cơm " + SH.rice + "g)", kcal: c.kcal, p: c.p, c: c.c, f: c.f, rid: R.id }); closeSheet(); render(); toast("Đã ghi " + R.n + ": " + c.kcal + " kcal"); }
+    else if (a === "addrecipe") { var R = RMAP[SH.rid], c = recipeCalc({ ing: SH.ing }, SH.rice); addFood(UI.date, { n: R.n + " (cơm " + SH.rice + "g)", kcal: c.kcal, p: c.p, c: c.c, f: c.f, rid: R.id, meal: SH.meal || "d" }); closeSheet(); render(); toast("Đã ghi " + R.n + ": " + c.kcal + " kcal"); }
     else if (a === "mul") { var x = +v, bb = SH.b0; SH.mul = x; document.getElementById("eK").value = int(bb.kcal * x); document.getElementById("eP").value = fmt(Math.round(bb.p * x * 10) / 10); sb.querySelectorAll('[data-act="mul"]').forEach(function (q) { q.setAttribute("aria-pressed", q === b); }); }
     else if (a === "saveedit") {
       var m = findFood(SH.id);
