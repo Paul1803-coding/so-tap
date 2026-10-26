@@ -322,7 +322,7 @@
   // =====================================================================
   // Giao diện chung
   // =====================================================================
-  var UI = { tab: "train", date: todayKey(), sel: null, banner: "", calMode: "month", calMonth: todayKey().slice(0, 7), chartEx: null };
+  var UI = { tab: "train", date: todayKey(), sel: null, banner: "", calMode: "month", calMonth: todayKey().slice(0, 7), chartEx: null, exOpen: {} };
   var view = document.getElementById("view"), fab = document.getElementById("fab");
   function render() {
     var ae = document.activeElement, fid = ae && ae.id && view.contains(ae) ? ae.id : null;
@@ -364,16 +364,22 @@
       var sets = []; for (var i = 0; i < slot.s; i++) sets.push({ kg: sg.kg == null ? "" : sg.kg, reps: sg.reps, rir: sg.rir, done: false });
       return { slot: slot.id, id: act.id, sets: sets, why: sg.why };
     });
-    S.draft = { key: key, start: Date.now(), ex: ex }; UI.banner = ""; flush(); render(); window.scrollTo(0, 0);
+    S.draft = { key: key, start: Date.now(), ex: ex }; UI.banner = ""; UI.exOpen = {}; flush(); render(); window.scrollTo(0, 0);
   }
   var FB = [["ok", "Hợp"], ["meh", "Tạm"], ["pain", "Đau khớp"], ["nofeel", "Không cảm nhận cơ"]];
   function vWorkout() {
     var d = S.draft, P = PROGRAM[d.key], done = 0, total = 0, h = "";
     d.ex.forEach(function (e) { e.sets.forEach(function (s) { total++; if (s.done) done++; }); });
-    h += '<div class="wo-head"><div><b class="disp" style="font-size:24px">' + P.name + '</b> <span class="note num" id="elapsed" data-start="' + d.start + '">' + Math.round((Date.now() - d.start) / 60000) + " phút · " + done + "/" + total + ' hiệp</span></div><button class="btn sm dark" data-act="finish">Kết thúc</button></div>';
+    h += '<div class="wo-head"><div><b class="disp" style="font-size:24px">' + P.name + '</b> <span class="note num" id="elapsed" data-start="' + d.start + '">' + Math.round((Date.now() - d.start) / 60000) + " phút · " + done + "/" + total + ' hiệp</span></div><button class="btn sm dark" data-act="finish">Kết thúc</button><div class="wo-bar"><i style="width:' + (total ? done / total * 100 : 0) + '%"></i></div></div>';
+    var cur = -1; d.ex.forEach(function (e, ei) { if (cur < 0 && !e.sets.every(function (s) { return s.done; })) cur = ei; });
     d.ex.forEach(function (e, ei) {
       var ex = EXDB[e.id], sl = SLOT[e.slot] || ex, all = e.sets.length && e.sets.every(function (s) { return s.done; }), adv = SLOT[e.slot] && !e.fb ? swapAdvice(sl) : null;
-      h += '<div class="ex' + (all ? " done" : "") + '"><div class="ex-top"><div><div class="ex-name"><a href="https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.q) + '" target="_blank" rel="noopener">' + esc(ex.n) + '</a></div><div class="note">' + (sl.role ? sl.role + " · " : "") + sl.r + " rep · RIR mục tiêu " + (sl.t === "C" ? 2 : 1) + '</div></div><button class="link" data-act="swap" data-i="' + ei + '">Đổi bài</button></div>';
+      // Bài đã xong và đã chấm cảm nhận: gọn thành một dòng, bấm để mở lại
+      if (all && e.fb && !UI.exOpen[ei]) {
+        h += '<button class="ex-sum" data-act="exopen" data-i="' + ei + '"><span class="ok">✓</span><span class="t"><b>' + esc(ex.n) + '</b><span class="note num">' + e.sets.map(function (q) { return fmt(q.kg) + "×" + q.reps; }).join(" · ") + '</span></span><span class="note">Sửa</span></button>';
+        return;
+      }
+      h += '<div class="ex' + (all ? " done" : "") + (ei === cur ? " cur" : "") + '"><div class="ex-top"><div><div class="ex-name"><a href="https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.q) + '" target="_blank" rel="noopener">' + esc(ex.n) + '</a></div><div class="note">' + (sl.role ? sl.role + " · " : "") + sl.r + " rep · RIR mục tiêu " + (sl.t === "C" ? 2 : 1) + '</div></div><button class="link" data-act="swap" data-i="' + ei + '">Đổi bài</button></div>';
       if (adv) h += '<div class="banner warn">' + adv.why + (adv.alt ? ' Nên đổi sang <b>' + esc(EXDB[adv.alt].n) + '</b>. <button class="link" data-act="quickswap" data-i="' + ei + '" data-v="' + adv.alt + '">Đổi ngay</button>' : " Chưa có bài thay thế với dụng cụ bạn có.") + "</div>";
       h += '<div class="target">' + esc(e.why) + "</div>";
       h += '<div class="sets-h"><span></span><span>kg</span><span>Rep</span><span>RIR (còn dư)</span><span></span></div>';
@@ -384,6 +390,7 @@
       });
       h += '<div class="row" style="gap:14px"><button class="link" data-act="addset" data-i="' + ei + '">+ Thêm hiệp</button>' + (e.sets.length > 1 && !e.sets[e.sets.length - 1].done ? '<button class="link" data-act="delset" data-i="' + ei + '">− Bớt hiệp</button>' : "") + "</div>";
       if (all) h += '<div class="fb"><span class="note">Bài này thế nào?</span><div class="chips">' + FB.map(function (f) { return '<button class="chip" aria-pressed="' + (e.fb === f[0]) + '" data-act="fb" data-i="' + ei + '" data-v="' + f[0] + '">' + f[1] + "</button>"; }).join("") + "</div></div>";
+      if (UI.exOpen[ei]) h += '<button class="link" data-act="exopen" data-i="' + ei + '" style="align-self:flex-start">Thu gọn</button>';
       h += "</div>";
     });
     h += '<p class="note">RIR = còn làm thêm được mấy rep nữa. Hiệp có RIR từ 0 đến 3 mới được tính là hiệp nặng.</p>';
@@ -422,17 +429,24 @@
     if (k === todayKey()) {
       var w = S.weight[k];
       h += '<div class="weigh"><span class="label" style="flex:1">Cân sáng nay</span>' + (w != null ? '<b class="num">' + fmt(w) + ' kg</b><button class="link" data-act="clearw">Sửa</button>' : '<input id="wIn" inputmode="decimal" placeholder="kg" aria-label="Cân nặng sáng nay"><button class="btn sm dark" data-act="savew">Lưu</button>') + "</div>";
-      h += dinnerCard(k);
     }
     var list = dayFood(k).slice().sort(function (a, b) { return a.ts - b.ts; });
     h += '<div class="card"><div class="row between"><h2>Đã ăn</h2><span class="note">Bấm món để sửa</span></div>';
     if (!list.length) h += '<p class="empty">Chưa ghi gì. Bấm "+ Thêm món".</p>';
+    var last = null;
     list.forEach(function (m) {
-      var tm = new Date(m.ts);
+      var tm = new Date(m.ts), ml = mealOf(tm);
+      if (ml !== last) {
+        var sub = list.filter(function (x) { return mealOf(new Date(x.ts)) === ml; }).reduce(function (a, x) { a.k += x.kcal; a.p += x.p; return a; }, { k: 0, p: 0 });
+        h += '<div class="meal-h"><span>' + ml + '</span><span class="num">' + int(sub.k) + " kcal · " + int(sub.p) + "g đạm</span></div>"; last = ml;
+      }
       h += '<button class="food-row" data-act="edit" data-v="' + m.id + '"><span class="t"><b>' + esc(m.n) + (m.mul && m.mul !== 1 ? " ×" + fmt(m.mul) : "") + '</b><span class="s">' + pad(tm.getHours()) + ":" + pad(tm.getMinutes()) + '</span></span><span class="k"><b>' + int(m.kcal) + "</b><span>" + fmt(m.p) + "g đạm</span></span></button>";
     });
-    return h + "</div>";
+    h += "</div>";
+    if (k === todayKey()) h += dinnerCard(k);
+    return h;
   }
+  function mealOf(d) { var m = d.getHours() * 60 + d.getMinutes(); return m < 630 ? "Bữa sáng" : m < 870 ? "Bữa trưa" : m < 1050 ? "Bữa phụ chiều" : "Bữa tối"; }
   function recipeCalc(r, riceG) {
     var k = 0, p = 0, c = 0, f = 0;
     r.ing.concat([["com", riceG]]).forEach(function (x) { var g = ING[x[0]], q = x[1] / 100; k += g[1] * q; p += g[2] * q; c += g[3] * q; f += g[4] * q; });
@@ -487,14 +501,14 @@
   function vProgress() {
     var h = "";
     if (UI.banner) h += '<div class="banner good">' + esc(UI.banner) + "</div>";
-    h += '<button class="btn dark" data-act="toclaude">Gửi dữ liệu cho Claude phân tích</button>';
     h += reportCard();
     h += bodyCard();
-    h += volumeCard();
-    h += strengthCard();
     h += weightCard();
+    h += strengthCard();
+    h += volumeCard();
     h += calendarCard();
     h += historyCard();
+    h += '<button class="btn ghost" data-act="toclaude">Gửi dữ liệu cho Claude phân tích sâu hơn</button>';
     return h;
   }
   // ---------- Thành phần cơ thể ----------
@@ -898,7 +912,7 @@
       '<div class="card"><h2>Sao lưu</h2><p class="note">Dữ liệu chỉ nằm trên máy này. Sao lưu ra file rồi cất vào Drive hoặc Zalo.' + (lb ? " Lần gần nhất " + new Date(lb).toLocaleDateString("vi-VN") + "." : "") + '</p><div class="grid2"><button class="btn" data-act="backup">Sao lưu</button><button class="btn ghost" data-act="restore">Khôi phục</button></div></div>' +
       '<div class="card"><h2>Cách app tính</h2><ul style="margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px"><li><b>1RM ước tính</b> = kg × (1 + (rep + RIR) / 30).</li><li><b>Hiệp nặng</b>: hiệp có RIR 0–3. Vùng nên đạt 10–20 hiệp mỗi nhóm cơ lớn mỗi tuần.</li><li><b>Tăng tạ</b> khi đạt đỉnh khoảng rep ở mọi hiệp mà vẫn còn dư rep.</li><li><b>Chững</b>: 3 buổi liền không vượt kỷ lục 1RM cũ.</li><li><b>Chọn bài</b>: mỗi vị trí trong giáo án có vài bài xếp theo ưu tiên; app lấy bài đầu tiên bạn có dụng cụ. Báo đau khớp, hoặc 2/3 buổi không cảm nhận cơ, thì app khuyên đổi bài.</li><li><b>Cân xu hướng</b>: trung bình trượt, mỗi ngày lấy 10% số cân mới.</li><li><b>% mỡ</b>: công thức Hải quân Mỹ từ vòng bụng, vòng cổ, chiều cao (nữ thêm vòng hông). Khối mỡ = cân xu hướng × % mỡ, khối nạc = phần còn lại.</li><li><b>TDEE</b> = calo ăn trung bình − thay đổi cân xu hướng × 7.700 kcal/kg, tính trên 3 tuần gần nhất.</li></ul></div>' +
       '<div class="card"><h2>Cơ sở dữ liệu</h2><p class="note">Xem calo, đạm của thực phẩm và lưu ý kỹ thuật từng bài tập.</p><a class="btn ghost" href="du-lieu.html" style="display:block;text-align:center;text-decoration:none">Mở trang dữ liệu</a></div>' +
-      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 3.6</p>');
+      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 3.7</p>');
   }
 
   // =====================================================================
@@ -910,11 +924,11 @@
     try { if (navigator.wakeLock && !wake) navigator.wakeLock.request("screen").then(function (l) { wake = l; l.addEventListener("release", function () { wake = null; }); }).catch(function () {}); } catch (e) {}
     drawTimer();
   }
-  function stopTimer() { timer = null; clearInterval(tick); tick = null; timerEl.hidden = true; if (wake) { try { wake.release(); } catch (e) {} wake = null; } }
+  function stopTimer() { timer = null; clearInterval(tick); tick = null; timerEl.hidden = true; document.body.classList.remove("has-timer"); if (wake) { try { wake.release(); } catch (e) {} wake = null; } }
   function drawTimer() {
     if (!timer) return stopTimer();
     var left = Math.round((timer.end - Date.now()) / 1000), over = left <= 0, a = Math.abs(left);
-    timerEl.hidden = false; timerEl.className = "timer" + (over ? " over" : "");
+    timerEl.hidden = false; timerEl.className = "timer" + (over ? " over" : ""); document.body.classList.add("has-timer");
     if (over && !timer.buzzed) { timer.buzzed = true; try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {} beep(); }
     timerEl.innerHTML = '<div class="in"><span class="clock num">' + (over ? "+" : "") + Math.floor(a / 60) + ":" + pad(a % 60) + '</span><span class="what"><b>' + (over ? "Vào hiệp tiếp" : "Đang nghỉ") + "</b>" + esc(timer.label) + '</span><button data-t="add">+30s</button><button data-t="stop">Tắt</button></div>';
     if (left < -600) stopTimer();
@@ -941,7 +955,8 @@
     else if (a === "finish") finishWorkout();
     else if (a === "cancel") { if (b.getAttribute("data-armed")) { S.draft = null; stopTimer(); flush(); render(); toast("Đã huỷ buổi tập"); } else { b.setAttribute("data-armed", "1"); b.textContent = "Bấm lần nữa để huỷ, mọi hiệp sẽ mất"; } }
     else if (a === "rir") { S.draft.ex[i].sets[j].rir = +v; save(); render(); }
-    else if (a === "fb") { S.draft.ex[i].fb = v; save(); render(); if (v === "pain" || v === "nofeel") toast(v === "pain" ? "Đã ghi. Buổi sau app sẽ đề xuất bài thay thế." : "Đã ghi. Nếu lặp lại, app sẽ đề xuất đổi bài."); }
+    else if (a === "exopen") { UI.exOpen[i] = !UI.exOpen[i]; render(); }
+    else if (a === "fb") { S.draft.ex[i].fb = v; UI.exOpen[i] = false; save(); render(); if (v === "pain" || v === "nofeel") toast(v === "pain" ? "Đã ghi. Buổi sau app sẽ đề xuất bài thay thế." : "Đã ghi. Nếu lặp lại, app sẽ đề xuất đổi bài."); }
     else if (a === "quickswap") { doSwap(i, v); }
     else if (a === "equip") openEquip();
     else if (a === "done") {
