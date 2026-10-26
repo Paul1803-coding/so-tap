@@ -38,7 +38,7 @@ function check(ok, msg) { console.log((ok ? "  ✓ " : "  ✗ ") + msg); if (!ok
   await p.click("[data-act=sel][data-v=UB]"); await p.click("[data-act=start]");
   for (var j = 0; j < 3; j++) await p.click('[data-act=done][data-i="0"][data-j="' + j + '"]');
   await p.click('[data-act=fb][data-i="0"][data-v="ok"]'); await p.click("#timer >> text=Tắt");
-  await p.click('[data-act=exmove][data-i="3"][data-v="now"]');
+  await p.click('[data-act=exmove][data-i="4"][data-v="now"]');
   var st = await p.state();
   check(st.draft.ex[1].id === "latcable", "Đưa bài vai lên làm tiếp theo");
   await p.shot("2_buoi_tap");
@@ -50,7 +50,7 @@ function check(ok, msg) { console.log((ok ? "  ✓ " : "  ✗ ") + msg); if (!ok
   check(ua === "Đẩy ngang → Kéo ngang → Đẩy dốc lên → Kéo dọc → Ép ngực → Tay sau", "Upper A: ngực, lưng, ép ngực rồi tay sau");
   await p.click("[data-act=sel][data-v=UB]");
   var ub = await p.evaluate(function () { return [].map.call(document.querySelectorAll(".next-ex .note"), function (e) { return e.textContent; }).join(" → "); });
-  check(ub.indexOf("Đẩy ngang") < 0 && /Vai giữa → Tay trước/.test(ub), "Upper B: vai, lưng, bay vai rồi tay trước, không có đẩy ngực");
+  check(ub === "Đẩy dọc → Kéo dọc → Đẩy vai tạ đơn → Kéo ngang → Vai giữa → Tay trước (cơ duỗi dài)", "Upper B: 2 bài đẩy vai xen kẽ bài kéo, không có đẩy ngực");
   await p.close();
 
   console.log("Cardio");
