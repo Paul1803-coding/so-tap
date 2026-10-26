@@ -5,7 +5,7 @@ App ghi tập gym và ăn uống, tự phân tích tiến bộ theo các phươn
 ## Ba mục
 
 - **Tập:** giáo án Upper A → Lower A → Upper B → Lower B, bài tự chọn theo dụng cụ phòng tập (khai báo trong ⚙️). Mỗi hiệp ghi kg, rep và RIR (còn dư mấy rep). App đề xuất mức tạ buổi sau theo tăng tiến kép, đồng hồ nghỉ tự chạy, kết thúc buổi có tổng kết và kỷ lục.
-- **Ăn:** chỉ hiện calo và đạm còn lại. Thêm món bằng cách gõ từng thứ đã ăn, cách nhau dấu phẩy ("xôi, thịt quay, chút rau" hoặc "150g gà, 1 chén cơm"). App tra cơ sở dữ liệu, cộng từng thành phần, cho đổi món và chỉnh gram từng dòng. Thịt cá mặc định là đã nấu chín, ghi "sống" nếu cân lúc sống. Món quen tự nhớ theo giờ ăn. Buổi chiều có "Tối nay nấu gì?" với 3 món từ 12 công thức, lượng cơm đã chỉnh vừa phần calo còn lại.
+- **Ăn:** chỉ hiện calo và đạm còn lại. Thêm món bằng cách gõ từng thứ đã ăn, cách nhau dấu phẩy ("xôi, thịt quay, chút rau" hoặc "150g gà, 1 chén cơm"). App tra cơ sở dữ liệu, cộng từng thành phần, cho đổi món và chỉnh gram từng dòng. Thịt cá mặc định là đã nấu chín, ghi "sống" nếu cân lúc sống. Đồ đóng gói: nhập số trên bao bì (trên 100g hoặc trên 1 gói) và lượng ăn, app tự nhân ra; lưu lại thì lần sau gõ tên là ra. Món quen tự nhớ theo giờ ăn. Buổi chiều có "Tối nay nấu gì?" với 3 món từ 12 công thức, lượng cơm đã chỉnh vừa phần calo còn lại.
 - **Tiến độ:** thành phần cơ thể (% mỡ, khối mỡ, khối nạc, kết luận recomp, cân đích theo % mỡ mục tiêu), nút "Gửi dữ liệu cho Claude phân tích", báo cáo tuần (cân xu hướng, TDEE đo được, mục tiêu, sức mạnh, vòng bụng), số hiệp nặng mỗi nhóm cơ, sức mạnh từng bài kèm cảnh báo chững lại và gợi ý giảm tải, biểu đồ, lịch tháng và năm.
 
 ## Cơ sở dữ liệu (`db.js`, xem ở `du-lieu.html`)

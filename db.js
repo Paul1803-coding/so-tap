@@ -329,10 +329,17 @@
   function norm(s) { return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/[^a-z0-9.,/ ]/g, " ").replace(/\s+/g, " ").trim(); }
   var NUMW = { "nua": 0.5, "mot": 1, "hai": 2, "ba": 3, "bon": 4, "tu": 4, "nam": 5, "sau": 6, "bay": 7, "tam": 8, "chin": 9, "muoi": 10, "ruoi": 1.5 };
   var GUNITS = { g: 1, gr: 1, gram: 1, gam: 1, kg: 1000, ml: 1, l: 1000, lit: 1000, lang: 100 };
-  var INDEX = FOODS.map(function (f) {
+  function indexOf(f) {
     var words = {}; (norm(f.n) + " " + norm(f.alias)).split(/[ ,]+/).forEach(function (w) { if (w.length > 1) words[w] = 1; });
     return { f: f, words: words, phrases: [norm(f.n.replace(/\(.*?\)/g, ""))].concat(f.alias.split(",").map(norm)).filter(Boolean) };
-  });
+  }
+  var INDEX = FOODS.map(indexOf);
+  // Món người dùng tự thêm (đồ đóng gói): được tìm như món có sẵn và ưu tiên hơn
+  function addCustom(c) {
+    var f = { id: c.id, n: c.n, g: "goi", kcal: c.kcal, p: c.p, c: c.c || 0, f: c.f || 0, units: c.units, alias: norm(c.n), liquid: false, custom: true, noG: !!c.noG };
+    for (var i = 0; i < FOODS.length; i++) if (FOODS[i].id === f.id) { FOODS[i] = f; INDEX[i] = indexOf(f); return f; }
+    FOODS.push(f); INDEX.push(indexOf(f)); return f;
+  }
   var UNITW = (function () {
     var w = {}; FOODS.forEach(function (f) { f.units.forEach(function (u) { var nu = norm(u.n); w[nu] = 1; w[nu.split(" ")[0]] = 1; }); });
     "cai con mieng mieng mieng to bat chen dia coc ly hop goi qua lat thia muong suat phan".split(" ").forEach(function (x) { w[x] = 1; });
@@ -347,7 +354,8 @@
       x.phrases.forEach(function (ph) { if (ph === nq) sc = Math.max(sc, 100); else if (ph.indexOf(nq) === 0) sc = Math.max(sc, 60); else if ((" " + ph + " ").indexOf(" " + nq + " ") >= 0) sc = Math.max(sc, 50); });
       var hit = qw.filter(function (w) { return x.words[w] || Object.keys(x.words).some(function (k) { return k.indexOf(w) === 0 && w.length >= 2; }); }).length;
       sc += hit / qw.length * 40 - (Object.keys(x.words).length > 8 ? 2 : 0);
-      if (/sống/.test(x.f.n) && !/\bsong\b/.test(nq)) sc -= 3; // ghi bữa ăn thì mặc định đồ đã nấu
+      if (/sống/.test(x.f.n) && !/\bsong\b/.test(nq)) sc -= 3;
+      if (x.f.custom) sc += 5; // ghi bữa ăn thì mặc định đồ đã nấu
       return { f: x.f, sc: sc, full: hit === qw.length };
     }).filter(function (x) { return x.sc >= 30 && x.full; });
     return scored.sort(function (a, b) { return b.sc - a.sc; }).slice(0, limit || 8).map(function (x) { return x.f; });
@@ -391,5 +399,5 @@
     return String(text).split(/\s*(?:,|\+|;|\n)\s*|\s+(?:và|va|với|voi)\s+/i).filter(function (x) { return x.trim(); }).map(parseOne);
   }
 
-  root.FitDB = { GROUPS: GROUPS, FOODS: FOODS, EQUIP: EQUIP, PATTERNS: PATTERNS, MUSCLES: MUSCLES, EXERCISES: EXERCISES, search: search, parse: parse, calc: calc, norm: norm };
+  root.FitDB = { GROUPS: GROUPS, FOODS: FOODS, EQUIP: EQUIP, PATTERNS: PATTERNS, MUSCLES: MUSCLES, EXERCISES: EXERCISES, search: search, parse: parse, calc: calc, norm: norm, addCustom: addCustom };
 })(this);

@@ -166,6 +166,7 @@
       draft: null,            // buổi đang tập
       food: {},               // ngày -> [{ id, n, kcal, p, c, f, base, mul, ts, rid }]
       weight: {}, waist: {}, neck: {}, hip: {},  // ngày -> số đo (kg, cm)
+      custom: [],             // đồ đóng gói tự thêm: { id, n, kcal, p, c, f (trên 100g hoặc 1 gói), units, noG }
       lastBackup: null
     };
   }
@@ -762,7 +763,7 @@
       '<div class="qchips">' + QUICK.map(function (x) { return '<button data-act="qadd" data-v="' + x + '">+ ' + x + "</button>"; }).join("") + '</div><div id="fres">' + searchRes() + "</div>";
   }
   var QUICK = ["cơm", "xôi", "bánh mì", "phở", "bún", "ức gà", "thịt lợn", "thịt bò", "cá", "trứng", "đậu phụ", "rau", "sữa chua", "chuối"];
-  var TOOLS = '<div class="tools"><button data-act="view" data-v="recipes"><span>🍳</span>Món tự nấu</button><button data-act="view" data-v="num"><span>✏️</span>Nhập số trên bao bì</button></div>';
+  var TOOLS = '<div class="tools"><button data-act="view" data-v="recipes"><span>🍳</span>Món tự nấu</button><button data-act="view" data-v="num"><span>📦</span>Đồ đóng gói (nhập số trên bao bì)</button></div>';
   function frList(list) { return '<p class="label">Món quen</p><div class="list-res">' + list.map(function (r, i) { return '<button data-act="fr" data-v="' + i + '"><span>' + esc(r.n) + '</span><span class="k">' + int(r.base.kcal) + " · " + fmt(r.base.p) + "g</span></button>"; }).join("") + "</div>"; }
   // Tách câu thành từng thứ, áp lựa chọn tay của người dùng (đổi món, chỉnh gram)
   function mealRows() {
@@ -792,7 +793,7 @@
     rows.forEach(function (r, i) {
       if (!r.ok) { h2 += '<div class="mrow miss"><span>"' + esc(r.text) + '" chưa có trong dữ liệu, sẽ bỏ qua. Đồ đóng gói thì dùng Nhập số.</span></div>'; return; }
       var name = r.opts.length > 1 ? '<select data-i="' + i + '" aria-label="Chọn đúng món">' + r.opts.map(function (f) { return '<option value="' + f.id + '"' + (f.id === r.food.id ? " selected" : "") + ">" + esc(f.n) + "</option>"; }).join("") + "</select>" : "<b>" + esc(r.food.n) + "</b>";
-      var amt = (r.unit && SH.adj[i] == null ? fmt(r.qty) + " " + r.unit.n + " ≈ " : "") + r.grams + (r.food.liquid ? "ml" : "g");
+      var amt = r.food.noG ? fmt(r.grams / 100) + " gói" : (r.unit && SH.adj[i] == null ? fmt(r.qty) + " " + r.unit.n + " ≈ " : "") + r.grams + (r.food.liquid ? "ml" : "g");
       h2 += '<div class="mrow"><div class="mn">' + name + '<span class="s">' + esc(amt) + '</span></div><span class="step"><button data-act="pg" data-i="' + i + '" data-d="-1" aria-label="Bớt">−</button><button data-act="pg" data-i="' + i + '" data-d="1" aria-label="Thêm">+</button></span><span class="k"><b>' + r.r.kcal + "</b><span>" + fmt(r.r.p) + "g đạm</span></span></div>";
     });
     var t = mealSum(rows);
@@ -803,8 +804,29 @@
     t.n = txt.charAt(0).toUpperCase() + txt.slice(1); t.parts = rows.map(function (r) { return { id: r.food.id, g: r.grams }; });
     return t;
   }
+  function regCustom() { (S.custom || []).forEach(FitDB.addCustom); }
+  // Đồ đóng gói: nhập số trên bao bì (trên 100g hoặc trên 1 gói), app tự nhân theo lượng ăn thật
   function numHtml() {
-    return head("Nhập số") + '<label class="field">Tên món<input id="nN" autocomplete="off"></label><div class="grid2"><label class="field">Calo (kcal)<input id="nK" inputmode="decimal"></label><label class="field">Đạm (g)<input id="nP" inputmode="decimal"></label></div><p class="note">Dùng cho đồ có ghi số trên bao bì.</p><button class="btn" data-act="addnum">Thêm</button><button class="link" data-act="view" data-v="search">‹ Quay lại</button>';
+    var per = SH.nb !== "pack", inp = function (id, lab, ph) { return '<label class="field">' + lab + '<input id="' + id + '" inputmode="decimal" placeholder="' + (ph || "") + '" value="' + esc((SH.nv || {})[id] || "") + '"></label>'; };
+    return head("Đồ đóng gói") + '<label class="field">Tên<input id="nN" autocomplete="off" placeholder="vd: Sữa chua Vinamilk, bánh Cosy" value="' + esc((SH.nv || {}).nN || "") + '"></label>' +
+      '<p class="label">Bao bì ghi số cho</p><div class="seg"><button data-act="nb" data-v="100" aria-pressed="' + per + '">100g (100ml)</button><button data-act="nb" data-v="pack" aria-pressed="' + !per + '">1 gói / 1 phần</button></div>' +
+      '<div class="grid2">' + inp("nK", "Calo (kcal)") + inp("nP", "Đạm (g)") + inp("nC", "Tinh bột (g)", "không bắt buộc") + inp("nF", "Béo (g)", "không bắt buộc") + "</div>" +
+      '<p class="label">Bạn ăn bao nhiêu?</p><div class="grid2">' + (per ? inp("nE", "Lượng ăn (g hoặc ml)", "vd: 45") + inp("nG", "1 gói nặng (g)", "không bắt buộc") : inp("nE", "Số gói / phần", "1") + inp("nG", "1 gói nặng (g)", "không bắt buộc")) + "</div>" +
+      '<label class="eq" style="margin-top:4px"><input type="checkbox" id="nSave"' + (SH.nsave === false ? "" : " checked") + '><span>Lưu lại, lần sau gõ tên là ra</span></label>' +
+      '<div class="stick"><div id="nres">' + numRes() + '</div><button class="btn" data-act="addnum">Thêm</button><button class="link" data-act="view" data-v="search">‹ Quay lại</button></div>';
+  }
+  function numVals() {
+    var v = SH.nv || {}, per = SH.nb !== "pack", k = num(v.nK), pk = num(v.nG), e = num(v.nE);
+    if (e == null) e = per ? (pk || 100) : 1;
+    var mul = per ? e / 100 : e;
+    return { ok: k != null, per: per, mul: mul, eat: e, pack: pk, base: { kcal: k || 0, p: num(v.nP) || 0, c: num(v.nC) || 0, f: num(v.nF) || 0 },
+      kcal: (k || 0) * mul, p: (num(v.nP) || 0) * mul, c: (num(v.nC) || 0) * mul, f: (num(v.nF) || 0) * mul };
+  }
+  function numRes() {
+    var r = numVals();
+    if (!r.ok) return '<p class="note">Nhập calo và đạm trên bao bì, app tự tính theo lượng bạn ăn.</p>';
+    var how = r.per ? fmt(r.base.kcal) + " kcal/100g × " + fmt(r.eat) + "g" : fmt(r.base.kcal) + " kcal/gói × " + fmt(r.eat) + " gói";
+    return totals(r) + '<p class="note num" style="margin:0">' + how + (r.c || r.f ? " · tinh bột " + fmt(Math.round(r.c)) + "g · béo " + fmt(Math.round(r.f)) + "g" : "") + "</p>";
   }
   function recipesHtml() {
     var b = dinnerBudget(UI.date), h = head("Món tự nấu") + '<p class="note">Cơm đã chỉnh cho vừa phần calo còn lại hôm nay (≈ ' + int(Math.max(0, b.kcal)) + " kcal).</p>";
@@ -853,7 +875,7 @@
       '<div class="card"><h2>Sao lưu</h2><p class="note">Dữ liệu chỉ nằm trên máy này. Sao lưu ra file rồi cất vào Drive hoặc Zalo.' + (lb ? " Lần gần nhất " + new Date(lb).toLocaleDateString("vi-VN") + "." : "") + '</p><div class="grid2"><button class="btn" data-act="backup">Sao lưu</button><button class="btn ghost" data-act="restore">Khôi phục</button></div></div>' +
       '<div class="card"><h2>Cách app tính</h2><ul style="margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px"><li><b>1RM ước tính</b> = kg × (1 + (rep + RIR) / 30).</li><li><b>Hiệp nặng</b>: hiệp có RIR 0–3. Vùng nên đạt 10–20 hiệp mỗi nhóm cơ lớn mỗi tuần.</li><li><b>Tăng tạ</b> khi đạt đỉnh khoảng rep ở mọi hiệp mà vẫn còn dư rep.</li><li><b>Chững</b>: 3 buổi liền không vượt kỷ lục 1RM cũ.</li><li><b>Chọn bài</b>: mỗi vị trí trong giáo án có vài bài xếp theo ưu tiên; app lấy bài đầu tiên bạn có dụng cụ. Báo đau khớp, hoặc 2/3 buổi không cảm nhận cơ, thì app khuyên đổi bài.</li><li><b>Cân xu hướng</b>: trung bình trượt, mỗi ngày lấy 10% số cân mới.</li><li><b>% mỡ</b>: công thức Hải quân Mỹ từ vòng bụng, vòng cổ, chiều cao (nữ thêm vòng hông). Khối mỡ = cân xu hướng × % mỡ, khối nạc = phần còn lại.</li><li><b>TDEE</b> = calo ăn trung bình − thay đổi cân xu hướng × 7.700 kcal/kg, tính trên 3 tuần gần nhất.</li></ul></div>' +
       '<div class="card"><h2>Cơ sở dữ liệu</h2><p class="note">Xem calo, đạm của thực phẩm và lưu ý kỹ thuật từng bài tập.</p><a class="btn ghost" href="du-lieu.html" style="display:block;text-align:center;text-decoration:none">Mở trang dữ liệu</a></div>' +
-      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 3.4</p>');
+      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 3.5</p>');
   }
 
   // =====================================================================
@@ -962,7 +984,21 @@
     else if (a === "pg") { var i = +b.getAttribute("data-i"), row = mealRows()[i]; SH.adj[i] = clamp(row.grams + +b.getAttribute("data-d") * gStep(row.food), 0, 2000); document.getElementById("fres").innerHTML = searchRes(); }
     else if (a === "addmeal") { var ml = mealItem(); if (!ml.kcal) return; addFood(UI.date, ml); closeSheet(); render(); toast("Đã thêm " + int(ml.kcal) + " kcal · " + fmt(ml.p) + "g đạm"); }
     else if (a === "fr") { var fr = SH.fr[+v]; addFood(UI.date, { n: fr.n, kcal: fr.base.kcal, p: fr.base.p, c: fr.base.c, f: fr.base.f, rid: fr.rid }); closeSheet(); render(); toast("Đã thêm " + fr.n); }
-    else if (a === "addnum") { var nn = document.getElementById("nN").value.trim(), nk = num(document.getElementById("nK").value); if (!nn || nk == null) { toast("Cần tên món và số calo"); return; } addFood(UI.date, { n: nn, kcal: nk, p: num(document.getElementById("nP").value) || 0 }); closeSheet(); render(); toast("Đã thêm " + nn); }
+    else if (a === "nb") { SH.nb = v; reSheet(addHtml()); }
+    else if (a === "addnum") {
+      var nv = SH.nv || {}, nn = (nv.nN || "").trim(), R0 = numVals();
+      if (!nn || !R0.ok) { toast("Cần tên và số calo"); return; }
+      if (document.getElementById("nSave").checked) {
+        // Lưu theo 100g; bao bì ghi theo gói mà biết cân nặng gói thì quy đổi về 100g
+        var cid = "my_" + norm(nn).replace(/[^a-z0-9]+/g, "_"), cu, b0 = R0.base;
+        if (R0.per) cu = { id: cid, n: nn, kcal: b0.kcal, p: b0.p, c: b0.c, f: b0.f, units: R0.pack ? [{ n: "gói", g: R0.pack }, { n: "g", g: 1 }] : [{ n: "phần 100g", g: 100 }] };
+        else if (R0.pack) { var q0 = 100 / R0.pack; cu = { id: cid, n: nn, kcal: b0.kcal * q0, p: b0.p * q0, c: b0.c * q0, f: b0.f * q0, units: [{ n: "gói", g: R0.pack }] }; }
+        else cu = { id: cid, n: nn, kcal: b0.kcal, p: b0.p, c: b0.c, f: b0.f, units: [{ n: "gói", g: 100 }], noG: true };
+        S.custom = (S.custom || []).filter(function (x) { return x.id !== cid; }).concat([cu]); FitDB.addCustom(cu);
+      }
+      var label = nn + " (" + (R0.per ? fmt(R0.eat) + "g" : fmt(R0.eat) + " gói") + ")";
+      addFood(UI.date, { n: label, kcal: R0.kcal, p: R0.p, c: R0.c, f: R0.f }); closeSheet(); render(); toast("Đã thêm " + int(R0.kcal) + " kcal · " + fmt(Math.round(R0.p * 10) / 10) + "g đạm");
+    }
     else if (a === "recipe") openRecipe(v);
     else if (a === "rice") { SH.rice = clamp(SH.rice + +b.getAttribute("data-d"), 0, 400); reSheet(addHtml()); }
     else if (a === "addrecipe") { var R = RMAP[SH.rid], c = recipeCalc(R, SH.rice); addFood(UI.date, { n: R.n + " (cơm " + SH.rice + "g)", kcal: c.kcal, p: c.p, c: c.c, f: c.f, rid: R.id }); closeSheet(); render(); toast("Đã ghi " + R.n + ": " + c.kcal + " kcal"); }
@@ -992,6 +1028,8 @@
     else if (a === "wipe") { if (b.getAttribute("data-armed")) { S = blank(); flush(); closeSheet(); render(); openProfile(); toast("Đã xoá toàn bộ"); } else { b.setAttribute("data-armed", "1"); b.textContent = "Bấm lần nữa để xoá hẳn"; } }
   });
   sheet.addEventListener("input", function (e) {
+    if (e.target.id === "nSave") { SH.nsave = e.target.checked; return; }
+    if (SH.view === "num" && e.target.id) { SH.nv = SH.nv || {}; SH.nv[e.target.id] = e.target.value; var nr = document.getElementById("nres"); if (nr) nr.innerHTML = numRes(); return; }
     if (e.target.id !== "fq") return;
     SH.q = e.target.value; document.getElementById("fres").innerHTML = searchRes();
   });
@@ -1020,7 +1058,7 @@
   document.getElementById("importFile").addEventListener("change", function () {
     var inp = this, f = inp.files && inp.files[0]; if (!f) return;
     var r = new FileReader();
-    r.onload = function () { try { var o = JSON.parse(r.result); if (!o || o.app !== "fitcore3") throw 0; delete o.app; S = Object.assign(blank(), o); flush(); closeSheet(); render(); toast("Đã khôi phục"); } catch (er) { toast("File này không phải bản sao lưu FitCore 3."); } inp.value = ""; };
+    r.onload = function () { try { var o = JSON.parse(r.result); if (!o || o.app !== "fitcore3") throw 0; delete o.app; S = Object.assign(blank(), o); regCustom(); flush(); closeSheet(); render(); toast("Đã khôi phục"); } catch (er) { toast("File này không phải bản sao lưu FitCore 3."); } inp.value = ""; };
     r.readAsText(f);
   });
 
@@ -1034,6 +1072,7 @@
   // Khởi động
   // =====================================================================
   load();
+  regCustom();
   autoCheckin();
   render();
   if (!S.profile) openProfile();
