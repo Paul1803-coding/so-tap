@@ -357,3 +357,11 @@ body.has-timer .toast { bottom: calc(var(--nav-h) + 92px + env(safe-area-inset-b
 .cpick input { width: 100%; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 600; color: var(--fg); padding: 6px 2px; text-align: center; }
 .wd.bd { position: relative; }
 .wd.bd::before { content: "🏸"; position: absolute; top: -4px; left: calc(50% - 22px); font-size: 12px; }
+/* v4.2: ghi cardio nhanh */
+.cquick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.cquick button { display: flex; flex-direction: column; align-items: center; gap: 2px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 8px 2px; font-size: 12px; font-weight: 600; color: var(--fg); }
+.cquick button span { font-size: 20px; }
+.crow .cmain { display: flex; flex: 1; align-items: center; gap: 10px; min-width: 0; background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; }
+.mchips { display: flex; gap: 6px; flex-wrap: wrap; }
+.mchips button { border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 99px; padding: 6px 11px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mchips button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
