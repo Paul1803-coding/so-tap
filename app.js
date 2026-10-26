@@ -158,6 +158,11 @@
       else o.meat = clamp(Math.round(need / (cut.p / 100) / 10) * 10, 80, 250);
       fitRice();
     }
+    // Thịt không quá ~55% calo của bữa, để phần mỡ không quá nhiều (ba chỉ, đùi có da) và vẫn còn chỗ cho cơm, rau
+    var cap = Math.max(0, b.kcal) * 0.55;
+    if (egg) o.eggs = clamp(Math.min(o.eggs, Math.floor(cap / (cut.kcal / 2))), 2, 4);
+    else o.meat = clamp(Math.min(o.meat, Math.floor(cap / (cut.kcal / 100) / 10) * 10), 80, 250);
+    fitRice();
     if (!egg && o.rice < 100) {
       var base = dSum(Object.assign({}, o, { meat: 0, rice: 0 })).kcal, room = b.kcal - base - 130;
       o.meat = clamp(Math.floor(room / (cut.kcal / 100) / 10) * 10, 80, o.meat); fitRice();
@@ -1141,7 +1146,7 @@
       '<div class="card"><h2>Sao lưu</h2><p class="note">Dữ liệu chỉ nằm trên máy này. Sao lưu ra file rồi cất vào Drive hoặc Zalo.' + (lb ? " Lần gần nhất " + new Date(lb).toLocaleDateString("vi-VN") + "." : "") + '</p><div class="grid2"><button class="btn" data-act="backup">Sao lưu</button><button class="btn ghost" data-act="restore">Khôi phục</button></div></div>' +
       '<div class="card"><h2>Cách app tính</h2><ul style="margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px"><li><b>1RM ước tính</b> = kg × (1 + (rep + RIR) / 30).</li><li><b>Hiệp nặng</b>: hiệp có RIR 0–3. Vùng nên đạt 10–20 hiệp mỗi nhóm cơ lớn mỗi tuần.</li><li><b>Tăng tạ</b> khi đạt đỉnh khoảng rep ở mọi hiệp mà vẫn còn dư rep.</li><li><b>Chững</b>: 3 buổi liền không vượt kỷ lục 1RM cũ.</li><li><b>Chọn bài</b>: mỗi vị trí trong giáo án có vài bài xếp theo ưu tiên; app lấy bài đầu tiên bạn có dụng cụ. Báo đau khớp, hoặc 2/3 buổi không cảm nhận cơ, thì app khuyên đổi bài.</li><li><b>Cân xu hướng</b>: trung bình trượt, mỗi ngày lấy 10% số cân mới.</li><li><b>% mỡ</b>: công thức Hải quân Mỹ từ vòng bụng, vòng cổ, chiều cao (nữ thêm vòng hông). Khối mỡ = cân xu hướng × % mỡ, khối nạc = phần còn lại.</li><li><b>TDEE</b> = calo ăn trung bình − thay đổi cân xu hướng × 7.700 kcal/kg, tính trên 3 tuần gần nhất.</li></ul></div>' +
       '<div class="card"><h2>Cơ sở dữ liệu</h2><p class="note">Xem calo, đạm của thực phẩm và lưu ý kỹ thuật từng bài tập.</p><a class="btn ghost" href="du-lieu.html" style="display:block;text-align:center;text-decoration:none">Mở trang dữ liệu</a></div>' +
-      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 4.4</p>');
+      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 4.5</p>');
   }
 
   // =====================================================================

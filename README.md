@@ -41,4 +41,4 @@ Dữ liệu lưu trên điện thoại, không gửi đi đâu. Vào ⚙️ → 
 
 ## Cập nhật app
 
-Sửa file, tăng `VERSION` trong `sw.js`, đẩy lên GitHub. Mở app khi có mạng là nhận bản mới.
+Sửa file, tăng `VERSION` trong `sw.js`, chạy `node tests/smoke.js`, đẩy lên GitHub. Mở app khi có mạng là nhận bản mới. Ghi chú cho Claude nằm trong `CLAUDE.md`; lệnh phát hành là skill `release`.
