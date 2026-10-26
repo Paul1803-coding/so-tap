@@ -166,7 +166,8 @@
       draft: null,            // buổi đang tập
       food: {},               // ngày -> [{ id, n, kcal, p, c, f, base, mul, ts, rid }]
       weight: {}, waist: {}, neck: {}, hip: {},  // ngày -> số đo (kg, cm)
-      custom: [],             // đồ đóng gói tự thêm: { id, n, kcal, p, c, f (trên 100g hoặc 1 gói), units, noG }
+      custom: [],
+      cardio: [],             // { id, date, type, lv, min, kcal } cầu lông và cardio             // đồ đóng gói tự thêm: { id, n, kcal, p, c, f (trên 100g hoặc 1 gói), units, noG }
       lastBackup: null
     };
   }
@@ -338,20 +339,58 @@
   // =====================================================================
   // TẬP
   // =====================================================================
-  function nextKey() { return S.workouts.length ? ORDER[(ORDER.indexOf(S.workouts[0].key) + 1) % 4] : "UA"; }
+  // Buổi tiếp theo = buổi lâu chưa tập nhất, nên đổi thứ tự (vd. làm Upper trước vì hôm qua đánh cầu) vẫn không bị sót buổi
+  function lastDone() { var last = {}; S.workouts.forEach(function (w) { if (last[w.key] == null) last[w.key] = w.ts; }); return last; }
+  function oldestOf(keys) { var last = lastDone(); return keys.slice().sort(function (a, b) { return (last[a] || 0) - (last[b] || 0) || ORDER.indexOf(a) - ORDER.indexOf(b); })[0]; }
+  function nextKey() { return oldestOf(ORDER); }
+  function isLower(k) { return k.charAt(0) === "L"; }
+
+  // Cardio. MET theo Compendium of Physical Activities (bản 2024 cho cầu lông; 2011 cho đi bộ dốc, elliptical).
+  // Calo đốt thêm = (MET − 1) × kg × giờ, tức phần vượt so với ngồi yên; chỉ tính thời gian vận động thật.
+  var CARDIO = {
+    bad: { n: "Cầu lông", ic: "🏸", lv: [["Đánh đôi nhẹ nhàng", 5.5], ["Đánh căng (đơn, đôi)", 7], ["Thi đấu tính điểm", 9]], lvDef: 1, min: 150 },
+    walk: { n: "Đi bộ dốc", ic: "⛰️", lv: [["Dốc 1–5%", 5.3], ["Dốc 6–15%", 8]], lvDef: 0, min: 30 },
+    ell: { n: "Elliptical", ic: "🔁", lv: [["Vừa sức", 5], ["Mạnh", 7.5]], lvDef: 0, min: 30 },
+    out: { n: "Đi bộ nhanh ngoài trời", ic: "🚶", lv: [["Nhanh (khoảng 5,6 km/h)", 4.3]], lvDef: 0, min: 30 }
+  };
+  var LIGHT_GOAL = 2; // buổi cardio nhẹ mỗi tuần, ngoài cầu lông
+  function cardioKcal(type, lv, min) { var w = trendNow() || S.profile.weight, met = CARDIO[type].lv[lv][1]; return Math.round((met - 1) * w * min / 60); }
+  function cardioIn(a, b) { return (S.cardio || []).filter(function (c) { return c.date >= a && c.date <= b; }); }
+  // Phút quy đổi theo WHO: phút vận động mạnh (≥ 6 MET) tính gấp đôi phút vận động vừa
+  function modMinutes(list) { return list.reduce(function (a, c) { return a + c.min * (CARDIO[c.type].lv[c.lv][1] >= 6 ? 2 : 1); }, 0); }
+  function hrZone() { var mx = 220 - S.profile.age; return [Math.round(mx * 0.64), Math.round(mx * 0.76)]; }
+  // Gợi ý hôm nay, dựa trên những gì đã ghi thật (lịch không cố định)
+  function todayPlan() {
+    var t = todayKey(), y = shiftKey(t, -1), ws = keyOf(weekStart(new Date())), wd = new Date().getDay();
+    var wk = cardioIn(ws, t), light = wk.filter(function (c) { return c.type !== "bad"; }).length, badWeek = wk.some(function (c) { return c.type === "bad"; });
+    var badT = cardioIn(t, t).some(function (c) { return c.type === "bad"; }), badY = cardioIn(y, y).some(function (c) { return c.type === "bad"; });
+    var liftT = S.workouts.filter(function (w) { return w.date === t; })[0], lifts = weekCount(), goal = S.profile.weekly;
+    var key = nextKey(), msg = "", extra = "";
+    var lightTip = light < LIGHT_GOAL ? "20–30 phút đi bộ dốc hoặc elliptical nhẹ, vẫn nói chuyện được (buổi cardio nhẹ " + (light + 1) + "/" + LIGHT_GOAL + " của tuần)" : "";
+    if (badT) { msg = "Hôm nay đã đánh cầu. Nghỉ tạ, ăn đủ tinh bột và đạm để chân hồi phục."; key = null; }
+    else if (liftT) { msg = "Hôm nay đã tập " + PROGRAM[liftT.key].name + "."; extra = lightTip && !isLower(liftT.key) ? "Còn sức thì thêm " + lightTip + "." : "Nghỉ ngơi, ngủ đủ 7–9 tiếng."; key = null; }
+    else if (lifts >= goal) { msg = "Đủ " + goal + " buổi tạ tuần này."; extra = lightTip ? "Hôm nay có thể làm " + lightTip + ", hoặc nghỉ." : "Nghỉ ngơi hoặc đi bộ nhẹ."; key = null; }
+    else {
+      if (badY && isLower(key)) { key = oldestOf(["UA", "UB"]); msg = "Hôm qua đánh cầu, chân cần thêm thời gian hồi phục: làm " + PROGRAM[key].name + " trước, buổi chân để hôm khác."; }
+      else if (!badWeek && (wd === 5 || wd === 6) && isLower(key)) { msg = "Nếu mai đánh cầu, nên làm " + PROGRAM[oldestOf(["UA", "UB"])].name + " hôm nay để chân còn khoẻ. Không đánh thì cứ tập " + PROGRAM[key].name + ". Chọn buổi ở hàng bên dưới."; }
+      if (lightTip && !isLower(key)) extra = "Sau buổi tạ có thể thêm " + lightTip + ".";
+    }
+    return { key: key, msg: msg, extra: extra, light: light, badWeek: badWeek, lifts: lifts, goal: goal, wk: wk };
+  }
   function weekCount() { var ws = keyOf(weekStart(new Date())); return S.workouts.filter(function (w) { return w.date >= ws; }).length; }
   function vTrain() {
     if (S.draft) return vWorkout();
-    var nk = nextKey(); if (!UI.sel) UI.sel = nk;
+    var plan = todayPlan(), nk = plan.key || nextKey(); if (!UI.sel) UI.sel = nk;
     var P = PROGRAM[UI.sel], h = "";
     if (UI.banner) h += '<div class="banner good">' + esc(UI.banner) + "</div>";
     var ws = weekStart(new Date()), tk = todayKey(), dots = "";
     for (var di = 0; di < 7; di++) {
-      var dk = keyOf(addDays(ws, di)), wo = S.workouts.filter(function (w) { return w.date === dk; })[0];
-      dots += '<span class="wd' + (wo ? " on" : "") + (dk === tk ? " today" : "") + '"><i>' + (wo ? PROGRAM[wo.key].name.replace(/[a-z ]/g, "") : "") + "</i>" + WD[(di + 1) % 7] + "</span>";
+      var dk = keyOf(addDays(ws, di)), wo = S.workouts.filter(function (w) { return w.date === dk; })[0], cd = cardioIn(dk, dk), bad = cd.some(function (c) { return c.type === "bad"; }), lt = cd.some(function (c) { return c.type !== "bad"; });
+      dots += '<span class="wd' + (wo || bad ? " on" : "") + (dk === tk ? " today" : "") + (lt ? " lt" : "") + (wo && bad ? " bd" : "") + '"><i>' + (wo ? PROGRAM[wo.key].name.replace(/[a-z ]/g, "") : bad ? "🏸" : "") + "</i>" + WD[(di + 1) % 7] + "</span>";
     }
     var mins = P.ex.reduce(function (a, sl) { return a + sl.s * (sl.t === "C" ? 3 : 2); }, 0);
-    h += '<div class="hero-t"><div class="row between"><span class="eyebrow">' + (UI.sel === nk ? "Buổi kế tiếp" : "Xem trước") + '</span><span class="eyebrow">Tuần này ' + weekCount() + "/" + S.profile.weekly + '</span></div><div class="ht-name">' + P.name + '</div><div class="ht-sub">' + P.sub + " · " + P.ex.length + " bài · khoảng " + Math.round(mins / 5) * 5 + ' phút</div><div class="week">' + dots + '</div><button class="btn light" data-act="start">Bắt đầu ' + P.name + "</button></div>";
+    h += '<div class="hero-t"><div class="row between"><span class="eyebrow">' + (plan.key && UI.sel === plan.key ? "Gợi ý hôm nay" : UI.sel === nk ? "Buổi kế tiếp" : "Xem trước") + '</span><span class="eyebrow">Tạ ' + plan.lifts + "/" + plan.goal + " · 🏸 " + (plan.badWeek ? "✓" : "–") + " · nhẹ " + plan.light + "/" + LIGHT_GOAL + '</span></div><div class="ht-name">' + P.name + '</div><div class="ht-sub">' + P.sub + " · " + P.ex.length + " bài · khoảng " + Math.round(mins / 5) * 5 + " phút</div>" +
+      (plan.msg || plan.extra ? '<div class="ht-tip">' + esc(plan.msg) + (plan.msg && plan.extra ? " " : "") + esc(plan.extra) + "</div>" : "") + '<div class="week">' + dots + '</div><button class="btn light" data-act="start">Bắt đầu ' + P.name + "</button></div>";
     if (!S.equipSet) h += '<div class="banner warn"><b>Phòng tập của bạn có gì?</b> Chọn một lần để app chỉ xếp bài bạn làm được. <button class="btn sm dark" data-act="equip" style="margin-top:8px">Chọn dụng cụ</button></div>';
     h += '<div class="seg">' + ORDER.map(function (k) { return '<button aria-pressed="' + (k === UI.sel) + '" data-act="sel" data-v="' + k + '">' + PROGRAM[k].name + "</button>"; }).join("") + "</div>";
     h += '<div class="card"><div class="row between"><h2>Các bài hôm nay</h2><span class="note">bộ × kg × rep</span></div><div>';
@@ -360,9 +399,27 @@
       h += '<div class="next-ex"><span>' + esc(act.n) + (adv ? ' <span class="flag">Nên đổi</span>' : "") + (hasEq(act.id) ? "" : ' <span class="flag">Thiếu máy</span>') + '<br><span class="note">' + slot.role + "</span></span><span>" + slot.s + " × " + (sg.kg != null && sg.kg > 0 ? fmt(sg.kg) + "kg × " + sg.reps : slot.r + " rep") + "</span></div>";
     });
     h += "</div></div>";
+    h += cardioCard(plan);
     var v = volume(shiftKey(todayKey(), -6), todayKey()), low = Object.keys(MUSCLES).filter(function (m) { return v[m] < MUSCLES[m][1]; });
     if (S.workouts.length) h += '<p class="note">7 ngày qua còn thiếu hiệp ở: ' + (low.length ? low.map(function (m) { return MUSCLES[m][0].toLowerCase(); }).join(", ") : "không nhóm nào") + '. Xem chi tiết ở mục Tiến độ.</p>';
     return h;
+  }
+  function cardioCard(plan) {
+    var t = todayKey(), ws = keyOf(weekStart(new Date())), z = hrZone(), list = cardioIn(shiftKey(t, -13), t).sort(function (a, b) { return b.date < a.date ? -1 : b.date > a.date ? 1 : b.id < a.id ? -1 : 1; });
+    var wk = plan.wk, kc = wk.reduce(function (a, c) { return a + c.kcal; }, 0), mm = modMinutes(wk);
+    var h = '<div class="card"><div class="row between"><h2>Cardio và cầu lông</h2><button class="btn sm" data-act="cardio">+ Ghi</button></div>';
+    h += '<div class="cstats"><div><b class="num">' + mm + '</b><span>/150 phút quy đổi, tuần này</span></div><div><b class="num">' + int(kc) + '</b><span>kcal đốt thêm, tuần này</span></div><div><b class="num">' + plan.light + "/" + LIGHT_GOAL + "</b><span>buổi cardio nhẹ, tuần này</span></div></div>";
+    if (list.length) h += '<div class="clist">' + list.slice(0, 6).map(function (c) {
+      var C = CARDIO[c.type]; return '<div class="crow"><span class="ic">' + C.ic + '</span><span class="t"><b>' + C.n + '</b><span class="note">' + friendly(c.date) + " · " + c.min + " phút · " + C.lv[c.lv][0].toLowerCase() + '</span></span><span class="k num">' + int(c.kcal) + ' kcal</span><button class="x" data-act="delcardio" data-v="' + c.id + '" aria-label="Xoá">×</button></div>';
+    }).join("") + "</div>";
+    else h += '<p class="empty">Chưa ghi buổi nào. Đánh cầu xong bấm "+ Ghi".</p>';
+    h += '<details class="cinfo"><summary>Lịch cardio của bạn và cách tính</summary><ul>' +
+      "<li><b>Cầu lông 1 buổi/tuần</b> là phần cardio chính. 2–3 tiếng đánh căng đã vượt mức WHO khuyên (75–150 phút vận động mạnh mỗi tuần).</li>" +
+      "<li><b>Thêm " + LIGHT_GOAL + " buổi cardio nhẹ</b> 20–30 phút (đi bộ dốc hoặc elliptical) để tăng sức bền và đốt thêm mà ít ảnh hưởng tới tăng cơ. Cường độ: nói được thành câu nhưng không hát được, nhịp tim khoảng " + z[0] + "–" + z[1] + " nhịp/phút.</li>" +
+      "<li>Nên làm <b>sau buổi Upper</b> hoặc vào ngày nghỉ. Hôm sau đánh cầu không tập chân; app tự đẩy buổi thân trên lên trước.</li>" +
+      "<li>Calo mục tiêu <b>giữ nguyên mỗi ngày</b>. Phần đốt của cầu lông đã nằm trong TDEE mà app tự học từ cân nặng và lượng ăn. Số kcal ở đây chỉ để tham khảo, có thể lệch 15–25%.</li>" +
+      "<li>Quy đổi: phút vận động mạnh (từ 6 MET, như cầu lông đánh căng) tính gấp đôi phút vận động vừa.</li></ul></details>";
+    return h + "</div>";
   }
   function startWorkout(key) {
     var ex = PROGRAM[key].ex.map(function (slot) {
@@ -632,6 +689,8 @@
       var v = volume(a, b), hs = Object.keys(v).reduce(function (x, m) { return x + v[m]; }, 0);
       L.push("- " + shortDate(a) + "–" + shortDate(b) + ": cân TB " + (wts.length ? fmt(avg(wts)) + " (" + wts.length + " lần)" : "–") + ", xu hướng cuối tuần " + (ts[b > t ? t : b] != null ? fmt(ts[b > t ? t : b]) : "–") + "; ăn TB " + (days.length ? int(avg(days.map(function (x) { return x.kcal; }))) + " kcal / " + int(avg(days.map(function (x) { return x.p; }))) + " g đạm (" + days.length + " ngày ghi đủ)" : "chưa ghi đủ") + "; " + ses.length + " buổi tập, " + fmt(hs) + " hiệp nặng.");
     }
+    var cl = cardioIn(shiftKey(ws, -21), t);
+    if (cl.length) { L.push(""); L.push("Cardio 4 tuần (phút, cường độ, kcal ước tính):"); cl.sort(function (a, b) { return a.date < b.date ? -1 : 1; }).forEach(function (c) { L.push("- " + shortDate(c.date) + ": " + CARDIO[c.type].n + " " + c.min + " phút, " + CARDIO[c.type].lv[c.lv][0].toLowerCase() + " (" + String(CARDIO[c.type].lv[c.lv][1]).replace(".", ",") + " MET), ~" + c.kcal + " kcal"); }); }
     var bs = bodySeries();
     if (bs.length) { L.push(""); L.push("Số đo (bụng/cổ → mỡ, khối mỡ, khối nạc):"); bs.slice(-6).forEach(function (x) { L.push("- " + shortDate(x.k) + ": bụng " + fmt(S.waist[x.k]) + " cm → " + fmt(x.raw) + "% mỡ, " + fmt(x.fm) + " kg mỡ, " + fmt(x.lm) + " kg nạc"); }); }
     else if (Object.keys(S.waist).length) { L.push(""); L.push("Vòng bụng: " + Object.keys(S.waist).sort().slice(-6).map(function (k) { return shortDate(k) + " " + fmt(S.waist[k]); }).join(", ") + " (chưa có vòng cổ)."); }
@@ -672,6 +731,8 @@
     h += '<div class="kv"><span>Calo bạn đốt (TDEE)</span><span><b>' + int(r.tdee) + " kcal</b>" + (r.est ? " · đo được " + int(r.est) : " · ước tính ban đầu") + "</span></div>";
     h += '<div class="kv"><span>Mục tiêu đang dùng</span><span><b>' + int(S.plan.kcal) + " kcal · " + S.plan.p + "g đạm</b></span></div>";
     h += '<div class="kv"><span>Sức mạnh 7 ngày</span><span>' + (sAvg != null ? '<b class="' + (sAvg >= 0 ? "up" : "down") + '">' + pct(sAvg) + "</b> (kỳ vọng +0,5–2%)" : "Cần 2 tuần dữ liệu") + "</span></div>";
+    var c7 = cardioIn(shiftKey(t, -6), t);
+    h += '<div class="kv"><span>Cardio 7 ngày</span><span>' + (c7.length ? "<b>" + modMinutes(c7) + "</b>/150 phút quy đổi · ~" + int(c7.reduce(function (a, c) { return a + c.kcal; }, 0)) + " kcal" : "Chưa ghi") + "</span></div>";
     h += '<div class="kv"><span>Vòng bụng</span><span>' + (waNow != null ? "<b>" + fmt(waNow) + " cm</b>" + (waPrev != null ? " · " + (waNow - waPrev > 0 ? "+" : "") + fmt(waNow - waPrev) : "") : "") + ' <button class="link" data-act="waist">Đo</button></span></div>';
     h += "</div>";
     if (r.conf < 1) h += '<p class="note">Độ tin cậy TDEE: ' + Math.round(r.conf * 100) + "%. Cần ít nhất 7 ngày ghi ăn đủ và 4 lần cân trong 3 tuần gần nhất (hiện có " + r.days + " ngày, " + r.wCount + " lần cân).</p>";
@@ -734,7 +795,8 @@
   }
   function dayScore(k) {
     var tr = S.workouts.some(function (w) { return w.date === k; }), s = daySum(k), ok = S.plan && s.kcal > 0 && Math.abs(s.kcal - S.plan.kcal) <= S.plan.kcal * 0.1 && s.p >= S.plan.p * 0.9;
-    return { tr: tr, logged: s.kcal > 0, ok: ok, score: (tr ? 2 : 0) + (ok ? 1 : 0), w: tr ? S.workouts.filter(function (w) { return w.date === k; })[0] : null };
+    var cd = cardioIn(k, k), bad = cd.some(function (c) { return c.type === "bad"; }), lt = cd.length > (bad ? 1 : 0);
+    return { tr: tr, logged: s.kcal > 0, ok: ok, score: (tr || bad ? 2 : 0) + (ok ? 1 : 0), w: tr ? S.workouts.filter(function (w) { return w.date === k; })[0] : null, bad: bad, lt: lt };
   }
   function calendarCard() {
     var today = todayKey(), h = '<div class="card"><div class="row between"><h2>Lịch</h2><div class="seg" style="width:140px"><button aria-pressed="' + (UI.calMode === "month") + '" data-act="calmode" data-v="month">Tháng</button><button aria-pressed="' + (UI.calMode === "year") + '" data-act="calmode" data-v="year">Năm</button></div></div>';
@@ -746,9 +808,9 @@
       for (var dd = 1; dd <= dim; dd++) {
         var k = keyOf(new Date(y, m, dd)), st = dayScore(k), fut = k > today;
         if (st.tr) nT++; if (st.ok) nOk++;
-        h += '<button class="cd' + (st.tr ? " tr" : "") + (k === today ? " now" : "") + (fut ? " fut" : "") + '" data-act="goday" data-v="' + k + '"' + (fut ? " disabled" : "") + ">" + dd + "<small>" + (st.w ? PROGRAM[st.w.key].name.replace("pper ", "").replace("ower ", "") : "") + '</small><span class="ft ' + (st.ok ? "ok" : st.logged ? "off" : "") + '"></span></button>';
+        h += '<button class="cd' + (st.tr ? " tr" : "") + (k === today ? " now" : "") + (fut ? " fut" : "") + '" data-act="goday" data-v="' + k + '"' + (fut ? " disabled" : "") + ">" + dd + "<small>" + (st.w ? PROGRAM[st.w.key].name.replace("pper ", "").replace("ower ", "") : "") + (st.bad ? "🏸" : "") + (st.lt ? "+" : "") + '</small><span class="ft ' + (st.ok ? "ok" : st.logged ? "off" : "") + '"></span></button>';
       }
-      h += '</div><div class="legend"><span><i style="background:var(--fg)"></i>Có tập</span><span><i style="background:var(--good);height:4px"></i>Ăn đúng mục tiêu</span><span><i style="background:var(--accent);height:4px"></i>Ăn lệch</span></div><p class="note">Tháng này ' + nT + " buổi tập, " + nOk + " ngày ăn đúng. Bấm một ngày để xem bữa ăn.</p>";
+      h += '</div><div class="legend"><span><i style="background:var(--fg)"></i>Có tập</span><span>🏸 cầu lông · + cardio nhẹ</span><span><i style="background:var(--good);height:4px"></i>Ăn đúng mục tiêu</span><span><i style="background:var(--accent);height:4px"></i>Ăn lệch</span></div><p class="note">Tháng này ' + nT + " buổi tập, " + nOk + " ngày ăn đúng. Bấm một ngày để xem bữa ăn.</p>";
     } else {
       var yr = +UI.calMonth.slice(0, 4);
       h += '<div class="datebar"><button class="icon" data-act="yrprev" aria-label="Năm trước">‹</button><span class="d">Năm ' + yr + '</span><button class="icon" data-act="yrnext" aria-label="Năm sau"' + (yr >= new Date().getFullYear() ? " disabled" : "") + '>›</button></div><div class="yr">';
@@ -888,6 +950,20 @@
     h += '<p class="note">Thịt cá cân lúc còn sống. 100g cơm chín ≈ ⅔ chén.</p><ol class="steps">' + r.steps.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") + '</ol><p class="tip">' + esc(r.tip) + "</p>";
     return h + '<div class="stick"><div id="rtot">' + totals(c) + '</div><button class="btn" data-act="addrecipe">Đã ăn món này</button></div>';
   }
+  // ---- Ghi cardio ----
+  function openCardio() { SH = { kind: "cardio", type: "bad", lv: CARDIO.bad.lvDef, min: CARDIO.bad.min, date: todayKey() }; openSheet(cardioHtml()); }
+  function cardioHtml() {
+    var C = CARDIO[SH.type], t = todayKey(), y = shiftKey(t, -1);
+    var h = head("Ghi cardio") + '<div class="ctypes">' + Object.keys(CARDIO).map(function (k) { return '<button aria-pressed="' + (SH.type === k) + '" data-act="ctype" data-v="' + k + '"><span>' + CARDIO[k].ic + "</span>" + CARDIO[k].n + "</button>"; }).join("") + "</div>";
+    if (C.lv.length > 1) h += '<p class="label">Cường độ</p><div class="seg">' + C.lv.map(function (l, i) { return '<button aria-pressed="' + (SH.lv === i) + '" data-act="clv" data-v="' + i + '">' + l[0] + "</button>"; }).join("") + "</div>";
+    h += '<p class="label">' + (SH.type === "bad" ? "Thời gian đánh thật (không tính lúc ngồi nghỉ)" : "Thời gian") + "</p>" + gIn('id="cMin"', SH.min, "phút");
+    h += '<p class="label">Ngày</p><div class="seg"><button aria-pressed="' + (SH.date === t) + '" data-act="cdate" data-v="' + t + '">Hôm nay</button><button aria-pressed="' + (SH.date === y) + '" data-act="cdate" data-v="' + y + '">Hôm qua</button><label class="cpick"><input type="date" id="cDate" max="' + t + '" value="' + SH.date + '"></label></div>';
+    return h + '<div class="stick"><div id="cres">' + cardioRes() + '</div><button class="btn" data-act="savecardio">Lưu</button></div>';
+  }
+  function cardioRes() {
+    var C = CARDIO[SH.type], met = C.lv[SH.lv][1], k = SH.min > 0 ? cardioKcal(SH.type, SH.lv, SH.min) : 0;
+    return '<div class="row between" style="align-items:flex-end"><div><span class="huge num">' + int(k) + '</span> <span class="note">kcal đốt thêm</span></div><span class="note num">' + String(met).replace(".", ",") + " MET · " + (met >= 6 ? "vận động mạnh" : "vận động vừa") + "</span></div>";
+  }
   // ---- Sửa món ----
   var MULS = [0.5, 0.75, 1, 1.25, 1.5, 2];
   function findFood(id) { return dayFood(UI.date).filter(function (m) { return m.id === id; })[0]; }
@@ -939,7 +1015,7 @@
       '<div class="card"><h2>Sao lưu</h2><p class="note">Dữ liệu chỉ nằm trên máy này. Sao lưu ra file rồi cất vào Drive hoặc Zalo.' + (lb ? " Lần gần nhất " + new Date(lb).toLocaleDateString("vi-VN") + "." : "") + '</p><div class="grid2"><button class="btn" data-act="backup">Sao lưu</button><button class="btn ghost" data-act="restore">Khôi phục</button></div></div>' +
       '<div class="card"><h2>Cách app tính</h2><ul style="margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px"><li><b>1RM ước tính</b> = kg × (1 + (rep + RIR) / 30).</li><li><b>Hiệp nặng</b>: hiệp có RIR 0–3. Vùng nên đạt 10–20 hiệp mỗi nhóm cơ lớn mỗi tuần.</li><li><b>Tăng tạ</b> khi đạt đỉnh khoảng rep ở mọi hiệp mà vẫn còn dư rep.</li><li><b>Chững</b>: 3 buổi liền không vượt kỷ lục 1RM cũ.</li><li><b>Chọn bài</b>: mỗi vị trí trong giáo án có vài bài xếp theo ưu tiên; app lấy bài đầu tiên bạn có dụng cụ. Báo đau khớp, hoặc 2/3 buổi không cảm nhận cơ, thì app khuyên đổi bài.</li><li><b>Cân xu hướng</b>: trung bình trượt, mỗi ngày lấy 10% số cân mới.</li><li><b>% mỡ</b>: công thức Hải quân Mỹ từ vòng bụng, vòng cổ, chiều cao (nữ thêm vòng hông). Khối mỡ = cân xu hướng × % mỡ, khối nạc = phần còn lại.</li><li><b>TDEE</b> = calo ăn trung bình − thay đổi cân xu hướng × 7.700 kcal/kg, tính trên 3 tuần gần nhất.</li></ul></div>' +
       '<div class="card"><h2>Cơ sở dữ liệu</h2><p class="note">Xem calo, đạm của thực phẩm và lưu ý kỹ thuật từng bài tập.</p><a class="btn ghost" href="du-lieu.html" style="display:block;text-align:center;text-decoration:none">Mở trang dữ liệu</a></div>' +
-      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 4.0</p>');
+      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 4.1</p>');
   }
 
   // =====================================================================
@@ -1018,6 +1094,8 @@
     else if (a === "yrprev" || a === "yrnext") { UI.calMonth = (+UI.calMonth.slice(0, 4) + (a === "yrnext" ? 1 : -1)) + "-01"; render(); }
     else if (a === "calmonth") { UI.calMonth = v; UI.calMode = "month"; render(); }
     else if (a === "goday") { UI.date = v; UI.tab = "food"; UI.banner = ""; render(); window.scrollTo(0, 0); }
+    else if (a === "cardio") openCardio();
+    else if (a === "delcardio") { if (b.getAttribute("data-armed")) { S.cardio = S.cardio.filter(function (c) { return c.id !== v; }); flush(); render(); toast("Đã xoá"); } else { b.setAttribute("data-armed", "1"); b.textContent = "Xoá?"; } }
     else if (a === "delw") { if (b.getAttribute("data-armed")) { S.workouts = S.workouts.filter(function (w2) { return w2.id !== v; }); flush(); render(); } else { b.setAttribute("data-armed", "1"); b.textContent = "Xoá?"; } }
   });
   view.addEventListener("input", function (e) {
@@ -1052,6 +1130,15 @@
     else if (a === "pg") { var i = +b.getAttribute("data-i"), row = mealRows()[i]; SH.adj[i] = clamp(row.grams + +b.getAttribute("data-d") * gStep(row.food), 0, 2000); document.getElementById("fres").innerHTML = searchRes(); }
     else if (a === "addmeal") { var ml = mealItem(); if (!ml.kcal) return; ml.meal = SH.meal; addFood(UI.date, ml); closeSheet(); render(); toast("Đã thêm " + int(ml.kcal) + " kcal · " + fmt(ml.p) + "g đạm"); }
     else if (a === "fr") { var fr = SH.fr[+v]; addFood(UI.date, { n: fr.n, kcal: fr.base.kcal, p: fr.base.p, c: fr.base.c, f: fr.base.f, rid: fr.rid, meal: SH.meal }); closeSheet(); render(); toast("Đã thêm " + fr.n); }
+    else if (a === "ctype") { SH.type = v; SH.lv = CARDIO[v].lvDef; SH.min = CARDIO[v].min; reSheet(cardioHtml()); }
+    else if (a === "clv") { SH.lv = +v; reSheet(cardioHtml()); }
+    else if (a === "cdate") { SH.date = v; reSheet(cardioHtml()); }
+    else if (a === "savecardio") {
+      if (!(SH.min > 0 && SH.min <= 600)) { toast("Nhập số phút"); return; }
+      var ck = cardioKcal(SH.type, SH.lv, SH.min);
+      S.cardio = (S.cardio || []).concat([{ id: uid(), date: SH.date, type: SH.type, lv: SH.lv, min: SH.min, kcal: ck }]);
+      var cn = CARDIO[SH.type].n; flush(); closeSheet(); render(); toast("Đã ghi " + cn.toLowerCase() + ": khoảng " + int(ck) + " kcal");
+    }
     else if (a === "nb") { SH.nb = v; reSheet(addHtml()); }
     else if (a === "addnum") {
       var nv = SH.nv || {}, nn = (nv.nN || "").trim(), R0 = numVals();
@@ -1110,6 +1197,8 @@
   });
   sheet.addEventListener("input", function (e) {
     if (e.target.id === "nSave") { SH.nsave = e.target.checked; return; }
+    if (e.target.id === "cMin") { SH.min = num(e.target.value) || 0; document.getElementById("cres").innerHTML = cardioRes(); return; }
+    if (e.target.id === "cDate") { if (e.target.value && e.target.value <= todayKey()) { SH.date = e.target.value; sb.querySelectorAll('[data-act="cdate"]').forEach(function (q) { q.setAttribute("aria-pressed", q.getAttribute("data-v") === SH.date); }); } return; }
     var t = e.target, gv = num(t.value); if (gv == null || gv < 0) gv = 0;
     if (t.hasAttribute("data-gi")) {
       var gi = +t.getAttribute("data-gi"), rows = mealRows(); SH.adj[gi] = rows[gi].food.noG ? gv * 100 : gv;
