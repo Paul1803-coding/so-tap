@@ -5,12 +5,12 @@ App ghi tập gym và ăn uống, tự phân tích tiến bộ theo các phươn
 ## Ba mục
 
 - **Tập:** giáo án Upper A → Lower A → Upper B → Lower B, bài tự chọn theo dụng cụ phòng tập (khai báo trong ⚙️). Mỗi hiệp ghi kg, rep và RIR (còn dư mấy rep). App đề xuất mức tạ buổi sau theo tăng tiến kép, đồng hồ nghỉ tự chạy, kết thúc buổi có tổng kết và kỷ lục.
-- **Ăn:** chỉ hiện calo và đạm còn lại. Thêm món bằng tìm kiếm, món quen (tự nhớ theo giờ ăn), ước lượng đĩa cơm bằng bàn tay, hoặc nhập số. Buổi chiều có "Tối nay nấu gì?" với 3 món từ 12 công thức, lượng cơm đã chỉnh vừa phần calo còn lại.
+- **Ăn:** chỉ hiện calo và đạm còn lại. Thêm món bằng cách gõ từng thứ đã ăn, cách nhau dấu phẩy ("xôi, thịt quay, chút rau" hoặc "150g gà, 1 chén cơm"). App tra cơ sở dữ liệu, cộng từng thành phần, cho đổi món và chỉnh gram từng dòng. Thịt cá mặc định là đã nấu chín, ghi "sống" nếu cân lúc sống. Món quen tự nhớ theo giờ ăn. Buổi chiều có "Tối nay nấu gì?" với 3 món từ 12 công thức, lượng cơm đã chỉnh vừa phần calo còn lại.
 - **Tiến độ:** thành phần cơ thể (% mỡ, khối mỡ, khối nạc, kết luận recomp, cân đích theo % mỡ mục tiêu), nút "Gửi dữ liệu cho Claude phân tích", báo cáo tuần (cân xu hướng, TDEE đo được, mục tiêu, sức mạnh, vòng bụng), số hiệp nặng mỗi nhóm cơ, sức mạnh từng bài kèm cảnh báo chững lại và gợi ý giảm tải, biểu đồ, lịch tháng và năm.
 
 ## Cơ sở dữ liệu (`db.js`, xem ở `du-lieu.html`)
 
-- **196 thực phẩm và món Việt:** calo, đạm, tinh bột, béo trên 100g (đồ uống trên 100ml), kèm đơn vị quen dùng (1 quả trứng ≈ 50g, 1 chén cơm ≈ 150g, 1 tô phở ≈ 650g) và tên gọi khác để tìm không dấu. Thực phẩm thô lấy gần đúng theo Bảng thành phần thực phẩm Việt Nam và USDA; món nấu sẵn ước tính theo khẩu phần phổ biến.
+- **213 thực phẩm và món Việt:** calo, đạm, tinh bột, béo trên 100g (đồ uống trên 100ml), kèm đơn vị quen dùng (1 quả trứng ≈ 50g, 1 chén cơm ≈ 150g, 1 tô phở ≈ 650g) và tên gọi khác để tìm không dấu. Thực phẩm thô lấy gần đúng theo Bảng thành phần thực phẩm Việt Nam và USDA; món nấu sẵn ước tính theo khẩu phần phổ biến.
 - **Hiểu câu nhập:** `FitDB.parse("150g ức gà, 1 chén cơm, 2 quả trứng, nửa tô phở")` trả về từng món với số gram và macro.
 - **55 bài tập:** cơ chính, cơ phụ, kiểu động tác, dụng cụ, bước tăng tạ, lưu ý kỹ thuật.
 

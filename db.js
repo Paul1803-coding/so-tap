@@ -12,22 +12,31 @@
   // Mỗi dòng: mã | tên | nhóm | kcal | đạm | tinh bột | béo (tính trên 100g, đồ uống trên 100ml) | đơn vị "tên:gram" cách nhau bởi "/" (đơn vị đầu là mặc định) | tên gọi khác
   var RAW = [
     // ---- Thịt, trứng ----
-    "bo_than|Thịt bò thăn (sống)|thit|140|21|0|6|lạng:100/miếng vừa:80|bo, thit bo, bo than, beef",
+    "bo_than|Thịt bò thăn (sống)|thit|140|21|0|6|lạng:100/miếng vừa:80|bo than, bo song, thit bo song",
     "bo_bap|Thịt bò bắp (sống)|thit|125|21.5|0|4|lạng:100|bo bap, bap bo",
     "bo_bachi|Ba chỉ bò (sống)|thit|250|17|0|20|lạng:100|ba roi bo, bo my, ba chi bo",
     "bo_xay|Bò xay (sống)|thit|215|18|0|15|lạng:100|thit bo xay, bo bam",
-    "bo_chin|Thịt bò nạc (chín)|thit|210|30|0|9|lạng:100/miếng vừa:60|bo nuong, bo luoc, bo xao, beef cooked",
-    "lon_nac|Thịt lợn nạc thăn (sống)|thit|140|20|0|6.5|lạng:100|lon nac, thit nac, than lon, heo nac, thit heo",
+    "bo_chin|Thịt bò (chín)|thit|210|28|0|10.5|phần:100/miếng:40|bo, thit bo, bo nuong, bo luoc, bo xao, bo kho, beef",
+    "lon_nac|Thịt lợn nạc thăn (sống)|thit|140|20|0|6.5|lạng:100|lon nac song, than lon, thit nac song",
+    "lon_chin|Thịt lợn nạc (chín: rang, kho, xào)|thit|200|27|1|10|phần:100/miếng:30|thit lon, thit heo, lon, heo, thit nac, lon nac, heo nac, thit rang, thit xao, thit kho",
+    "lon_bachi_chin|Ba chỉ (chín: luộc, rang, kho)|thit|370|19|1|32|phần:100/miếng:30|ba chi rang, ba chi luoc, ba chi kho, thit ba chi chin",
+    "heo_quay|Thịt lợn quay / kebab|thit|300|20|3|23|phần ăn kèm:60/lạng:100|heo quay, thit quay, lon quay, thit lon quay, thit heo quay, kebab, doner, thit kebab",
+    "thit_nuong|Thịt lợn nướng|thit|250|21|6|16|phần ăn kèm:60/lạng:100/xiên:40|thit nuong, lon nuong, heo nuong, cha nuong",
+    "xa_xiu|Xá xíu|thit|240|21|10|12|phần ăn kèm:60/lạng:100|xa xiu, xa xiu, char siu",
+    "pate|Pate gan|thit|320|13|3|28|phết bánh mì:20|pate, pa te",
+    "lap_xuong|Lạp xưởng|thit|450|17|20|34|cái:30|lap xuong, lap xuong",
+    "ga_ran|Gà rán / gà chiên|thit|260|22|9|15|miếng:100|ga ran, ga chien, kfc",
+    "ga_xe|Gà xé / gà luộc xé|thit|190|28|0|8|phần ăn kèm:60/lạng:100|ga xe, ga luoc xe",
     "lon_vai|Nạc vai lợn (sống)|thit|190|18|0|13|lạng:100|nac vai, vai heo",
     "lon_bachi|Ba chỉ lợn (sống)|thit|390|14|0|37|lạng:100/miếng:40|ba chi, ba roi, thit ba chi, heo ba roi",
     "lon_suon|Sườn lợn (phần ăn được)|thit|290|18|0|24|lạng:100/miếng:50|suon, suon heo, suon non",
     "lon_xay|Thịt lợn xay (sống)|thit|260|17|0|21|lạng:100|thit xay, thit bam, heo xay",
-    "lon_luoc|Thịt lợn luộc (vai, ba chỉ)|thit|260|18|0|21|lạng:100/miếng:30|thit luoc, heo luoc",
-    "ga_uc|Ức gà bỏ da (sống)|thit|120|22.5|0|2.6|lạng:100/miếng ức:200|uc ga, ga, thit ga, chicken breast",
-    "ga_uc_chin|Ức gà (chín)|thit|165|31|0|3.6|lạng:100|uc ga luoc, uc ga nuong, ga luoc",
-    "ga_dui|Đùi gà bỏ da (sống)|thit|125|19.5|0|5|lạng:100/đùi to:200|dui ga, chicken thigh",
+    "lon_luoc|Thịt lợn luộc (vai, ba chỉ)|thit|260|18|0|21|phần:100/miếng:30|thit luoc, heo luoc",
+    "ga_uc|Ức gà bỏ da (sống)|thit|120|22.5|0|2.6|lạng:100/miếng ức:200|uc ga song",
+    "ga_uc_chin|Ức gà (chín)|thit|165|31|0|3.6|phần:100/miếng ức:150|uc ga, ga, thit ga, uc ga luoc, uc ga nuong, ga luoc, chicken breast",
+    "ga_dui|Đùi gà bỏ da (sống)|thit|125|19.5|0|5|lạng:100/đùi to:200|dui ga song",
     "ga_dui_da|Đùi gà có da (sống)|thit|220|17|0|16|lạng:100/đùi to:230|dui ga ca da",
-    "ga_dui_chin|Đùi gà bỏ da (chín)|thit|180|25|0|8|lạng:100/đùi:150|dui ga nuong, dui ga luoc",
+    "ga_dui_chin|Đùi gà (chín)|thit|200|25|0|11|đùi:150/phần:100|dui ga, dui ga nuong, dui ga luoc, chicken thigh",
     "ga_canh|Cánh gà có da (sống)|thit|200|17.5|0|14|cái:45/lạng:100|canh ga, chicken wing",
     "ga_ta|Gà ta có da (luộc)|thit|200|25|0|11|lạng:100/miếng:40|ga ta, ga luoc ca da",
     "vit|Thịt vịt có da|thit|270|17.5|0|22|lạng:100/miếng:40|vit, thit vit, vit quay",
@@ -45,6 +54,8 @@
     "nem_chua|Nem chua|thit|140|20|5|4|cái:25|nem chua",
     "ruoc|Ruốc (chà bông) lợn|thit|396|46|20|14|thìa canh:10|ruoc, cha bong",
     // ---- Cá, hải sản ----
+    "ca_chin|Cá (chín: hấp, rán, kho)|hai|150|22|1|6|phần:100/khúc:120|ca, ca ran, ca chien, ca hap, ca kho",
+    "cha_ca|Chả cá|hai|180|15|10|9|miếng:50|cha ca",
     "ca_basa|Cá basa phi lê (sống)|hai|90|15|0|3.5|lạng:100/miếng:150|basa, ca basa, ca tra",
     "ca_rophi|Cá rô phi / diêu hồng (sống)|hai|96|20|0|1.7|lạng:100|ro phi, dieu hong, tilapia",
     "ca_thu|Cá thu (sống)|hai|160|20|0|9|lạng:100/khúc:120|ca thu, mackerel",
@@ -53,8 +64,9 @@
     "ca_ngu_hop|Cá ngừ hộp ngâm nước|hai|116|26|0|0.8|hộp (cái):120|ca ngu hop, tuna can",
     "ca_ngu_hopdau|Cá ngừ hộp ngâm dầu|hai|198|29|0|8|hộp (cái):120|ca ngu dau",
     "ca_chep|Cá chép / trắm (sống)|hai|120|18|0|5|lạng:100|ca chep, ca tram",
-    "ca_kho|Cá kho (thu, basa)|hai|150|16|5|7|khúc:120|ca kho, ca kho to",
-    "tom|Tôm bóc vỏ (sống)|hai|85|18|0.9|1|lạng:100/con to:20|tom, shrimp, tom luoc",
+    "ca_kho|Cá kho tộ|hai|160|16|6|8|khúc:120|ca kho to",
+    "tom|Tôm bóc vỏ (sống)|hai|85|18|0.9|1|lạng:100/con to:20|tom song",
+    "tom_chin|Tôm (chín)|hai|99|24|0.2|0.3|phần:100/con to:15|tom, tom luoc, tom hap, tom rang, shrimp",
     "muc|Mực (sống)|hai|92|15.6|3|1.4|lạng:100|muc, squid",
     "cua|Thịt cua|hai|87|18|0|1.1|lạng:100|cua, ghe",
     "ngao|Ngao / nghêu (thịt)|hai|74|12.8|2.6|1|lạng:100|ngao, ngheu, so",
@@ -94,7 +106,7 @@
     "mien|Miến (đã nấu)|tb|90|0.1|22|0|bát:200|mien",
     "mi_soi|Mì sợi luộc|tb|138|4.5|25|2|bát:200|mi, mi soi, mi trung",
     "mi_goi|Mì gói (khô)|tb|470|9|63|20|gói:75|mi goi, mi tom, mi an lien, hao hao",
-    "banh_mi|Bánh mì không|tb|265|8.5|52|3|ổ:85|banh mi khong, bread",
+    "banh_mi|Bánh mì không|tb|265|8.5|52|3|ổ:85|banh mi, banh mi khong, bread",
     "banh_mi_sw|Bánh mì sandwich|tb|265|9|49|3.2|lát:28|sandwich, banh mi lat",
     "khoai_lang|Khoai lang luộc|tb|86|1.6|20|0.1|củ vừa:200|khoai lang",
     "khoai_tay|Khoai tây luộc|tb|87|1.9|20|0.1|củ vừa:150|khoai tay, potato",
@@ -126,7 +138,10 @@
     "nam|Nấm (rơm, đùi gà, kim châm)|rau|30|3|4.5|0.3|bát:100|nam, nam rom, nam kim cham",
     "gia|Giá đỗ|rau|30|3|6|0.2|bát:100|gia, gia do",
     "mang_tay|Măng tây|rau|20|2.2|3.9|0.1|bó:150|mang tay, asparagus",
-    "rau_luoc|Rau luộc (các loại)|rau|25|2|4|0.3|đĩa:250|rau luoc, rau",
+    "rau_luoc|Rau luộc (các loại)|rau|25|2|4|0.3|đĩa:250/nắm:80|rau luoc, rau, rau xanh",
+    "dua_chua|Dưa góp / dưa chua / đồ chua|rau|35|1|7|0.2|phần ăn kèm:40|dua gop, dua chua, do chua, dua cai",
+    "rau_song|Rau sống, rau thơm|rau|18|1.5|3|0.2|nắm:50|rau song, rau thom, rau ghem",
+    "mo_hanh|Mỡ hành / hành phi|gv|600|1|10|60|thìa canh:10|mo hanh, hanh phi",
     "rau_xao|Rau xào (các loại)|rau|75|2.5|4.5|5.5|đĩa:200|rau xao, rau muong xao toi",
     // ---- Trái cây (phần ăn được) ----
     "chuoi|Chuối|qua|89|1.1|23|0.3|quả vừa:118|chuoi, banana",
@@ -149,6 +164,7 @@
     "mo_lon|Mỡ lợn|gv|900|0|0|100|thìa canh:13|mo, mo heo",
     "bo_dv|Bơ (động vật)|gv|717|0.9|0.1|81|thìa cà phê:5|bo, butter",
     "duong|Đường|gv|387|0|100|0|thìa cà phê:4|duong, sugar",
+    "nuoc_sot|Nước sốt / nước thịt rưới|gv|120|2|8|9|thìa canh:15|nuoc sot, nuoc thit, sot",
     "mat_ong|Mật ong|gv|304|0.3|82|0|thìa cà phê:7|mat ong, honey",
     "nuoc_mam|Nước mắm|gv|35|5|3.6|0|thìa canh:15|nuoc mam",
     "xi_dau|Xì dầu|gv|53|8|5|0.6|thìa canh:15|xi dau, nuoc tuong, soy sauce",
@@ -193,7 +209,8 @@
     "com_bui|Cơm bụi / văn phòng (2 món + rau)|mon|170|7|20|6.5|đĩa:430/hộp:400|com bui, com van phong, com hop, com cang tin",
     "xoi_xeo|Xôi xéo|mon|210|4.7|33|6.6|gói:220|xoi xeo",
     "xoi_man|Xôi mặn / xôi thịt|mon|220|8|31|6.7|suất:270/nửa suất:170|xoi man, xoi thit, xoi ga",
-    "bm_thit|Bánh mì thịt / pate|mon|230|10|27|8.6|ổ:180|banh mi, banh mi thit, banh mi pate",
+    "bm_thit|Bánh mì thịt / pate|mon|230|10|27|8.6|ổ:180|banh mi thit, banh mi pate, banh mi xiu mai",
+    "bm_kebab|Bánh mì kebab / doner|mon|250|11|26|11|ổ:200|banh mi kebab, banh mi doner, doner kebab",
     "bm_trung|Bánh mì trứng|mon|235|11.5|26|9.4|ổ:185|banh mi trung, banh mi op la",
     "banh_bao|Bánh bao nhân thịt|mon|230|8.5|32|7.5|cái:140|banh bao",
     "banh_cuon|Bánh cuốn (kèm chả)|mon|140|5.2|21|3.6|đĩa:290|banh cuon",
@@ -330,7 +347,7 @@
       x.phrases.forEach(function (ph) { if (ph === nq) sc = Math.max(sc, 100); else if (ph.indexOf(nq) === 0) sc = Math.max(sc, 60); else if ((" " + ph + " ").indexOf(" " + nq + " ") >= 0) sc = Math.max(sc, 50); });
       var hit = qw.filter(function (w) { return x.words[w] || Object.keys(x.words).some(function (k) { return k.indexOf(w) === 0 && w.length >= 2; }); }).length;
       sc += hit / qw.length * 40 - (Object.keys(x.words).length > 8 ? 2 : 0);
-      if (/sống/.test(x.f.n)) sc += 1; // món thô hay được tự cân
+      if (/sống/.test(x.f.n) && !/\bsong\b/.test(nq)) sc -= 3; // ghi bữa ăn thì mặc định đồ đã nấu
       return { f: x.f, sc: sc, full: hit === qw.length };
     }).filter(function (x) { return x.sc >= 30 && x.full; });
     return scored.sort(function (a, b) { return b.sc - a.sc; }).slice(0, limit || 8).map(function (x) { return x.f; });
@@ -341,7 +358,14 @@
     var t = norm(txt).replace(/,/g, "."), qty = null, unit = null, rest;
     var m = t.match(/^(\d+(?:\.\d+)?|\d+\/\d+)\s*(.*)$/);
     if (m) { qty = m[1].indexOf("/") > 0 ? +m[1].split("/")[0] / +m[1].split("/")[1] : +m[1]; rest = m[2]; }
-    else { var w = t.split(" "); if (NUMW[w[0]] != null) { qty = NUMW[w[0]]; rest = w.slice(1).join(" "); } else rest = t; }
+    else {
+      // Chữ số chỉ tính khi đứng trước đơn vị ("ba chỉ", "nấm" không phải số)
+      var w = t.split(" "), nx = w.slice(1).join(" ");
+      if (NUMW[w[0]] != null && (/^(nua|mot|hai|ruoi)$/.test(w[0]) || UNITW.some(function (u) { return nx.indexOf(u + " ") === 0; }))) { qty = NUMW[w[0]]; rest = nx; } else rest = t;
+    }
+    // "chút rau", "một ít cơm": nửa phần; "nhiều cơm": 1,5 phần
+    var qm = rest.match(/^(chut|it|xiu)\s+(.*)$/); if (qm) { qty = 0.5; rest = qm[2]; }
+    qm = rest.match(/^nhieu\s+(.*)$/); if (qm) { qty = 1.5 * (qty || 1); rest = qm[1]; }
     if (/^ruoi /.test(rest)) { qty = (qty || 1) + 0.5; rest = rest.slice(5); }
     var gm = rest.match(/^(kg|gram|gam|gr|g|ml|lit|l|lang)\b\s*(.*)$/);
     if (gm) { unit = { n: gm[1], g: GUNITS[gm[1]] }; rest = gm[2]; }
