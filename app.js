@@ -95,31 +95,91 @@
     });
   });
 
-  // Thực phẩm theo 100g sống (trừ cơm là cơm chín): kcal, đạm, tinh bột, béo
-  var ING = {
-    ga: ["Ức gà", 120, 23, 0, 2.6], dui: ["Đùi gà rút xương, bỏ da", 145, 19, 0, 7.5], than: ["Thăn lợn", 143, 21, 0, 6],
-    lonxay: ["Lợn xay", 260, 17, 0, 21], bo: ["Thịt bò thăn/bắp", 150, 21, 0, 7], boxay: ["Bò xay", 215, 18, 0, 15],
-    basa: ["Cá basa phi lê", 100, 15, 0, 4], cahoi: ["Cá hồi", 208, 20, 0, 13], tom: ["Tôm bóc vỏ", 85, 18, 0, 1],
-    trung: ["Trứng (1 quả ≈ 50g)", 145, 12.6, 0.8, 9.6], dauphu: ["Đậu phụ", 76, 8, 1.9, 4.8], rau: ["Rau xanh", 25, 2, 4, 0.3],
-    cachua: ["Cà chua", 18, 0.9, 3.9, 0.2], hanhtay: ["Hành tây", 40, 1.1, 9, 0.1], dau: ["Dầu ăn", 900, 0, 0, 100], duong: ["Đường / mật ong", 380, 0, 95, 0],
-    com: ["Cơm chín", 130, 2.7, 28, 0.3]
+  // Bữa tối tự ghép: đạm chính × phần thịt × cách nấu × vị. Thịt cân lúc sống; số liệu lấy từ db.js.
+  var DPRO = {
+    bo: { n: "Bò", cuts: [["bo_than", "Thăn"], ["bo_bap", "Bắp"]] },
+    lon: { n: "Lợn", cuts: [["lon_nac", "Nạc thăn"], ["lon_vai", "Nạc vai"], ["lon_bachi", "Ba chỉ"]] },
+    ga: { n: "Gà", cuts: [["ga_uc", "Ức"], ["ga_dui", "Đùi bỏ da"], ["ga_dui_da", "Đùi có da"]] },
+    trung: { n: "Trứng", cuts: [["trung", "Trứng gà"]] }
   };
-  // Công thức cho 1 người. Cơm tính riêng để app tự chỉnh theo phần calo còn lại.
-  var RECIPES = [
-    { id: "xaosa", n: "Ức gà xào sả ớt", ing: [["ga", 200], ["dau", 10], ["rau", 250]], steps: ["Thái ức gà lát mỏng ngang thớ.", "Ướp 15 phút: 1 thìa cà phê nước mắm, tiêu, tỏi băm, 2 cây sả băm, ớt.", "Phi tỏi với 2 thìa cà phê dầu, xào lửa to 5–6 phút đến khi gà vừa săn.", "Rau luộc hoặc xào chung."], tip: "Gà vừa hết hồng là tắt bếp, xào lâu sẽ khô." },
-    { id: "aptieu", n: "Ức gà áp chảo tiêu đen", ing: [["ga", 200], ["dau", 8], ["rau", 250]], steps: ["Lạng ức gà dày khoảng 1cm cho đều.", "Ướp muối, nhiều tiêu đen, tỏi băm 15 phút.", "Chảo thật nóng với ít dầu, áp 3–4 phút mỗi mặt, không lật nhiều.", "Để nghỉ 5 phút rồi mới thái."], tip: "Ăn kèm chanh muối tiêu và dưa chuột cho đỡ khô." },
-    { id: "nuongsa", n: "Gà nướng sả nồi chiên", ing: [["dui", 220], ["dau", 5], ["duong", 5], ["rau", 250]], steps: ["Ướp đùi gà với sả băm, tỏi, nước mắm, tiêu, 1 thìa cà phê mật ong, 1 thìa cà phê dầu, 30 phút.", "Nồi chiên không dầu 180°C 20–25 phút, lật một lần ở giữa.", "Ăn kèm rau luộc."], tip: "Ướp từ tối hôm trước thì hôm sau chỉ việc nướng." },
-    { id: "kho", n: "Đùi gà kho gừng", ing: [["dui", 220], ["dau", 8], ["duong", 3], ["rau", 250]], steps: ["Chặt đùi gà miếng vừa ăn.", "Ướp nước mắm, gừng thái sợi, tiêu, hành tím.", "Đảo săn với 2 thìa cà phê dầu, thêm nước ngập nửa thịt, kho lửa nhỏ 25 phút."], tip: "Nấu dư một suất cất tủ lạnh, để hôm sau càng ngấm." },
-    { id: "rim", n: "Thăn lợn rim tiêu", ing: [["than", 180], ["dau", 8], ["duong", 3], ["rau", 250]], steps: ["Thái thăn miếng dày khoảng 1cm.", "Ướp nước mắm, nhiều tiêu, hành tím băm, chút đường.", "Áp chảo săn 2 mặt, thêm ½ bát nước, rim lửa nhỏ 15 phút đến khi nước sệt."], tip: "Rim cho nước còn sệt để chan cơm, đừng để cạn khô." },
-    { id: "nhoi", n: "Đậu phụ nhồi thịt sốt cà chua", rice: 120, ing: [["lonxay", 120], ["dauphu", 150], ["cachua", 150], ["rau", 150]], steps: ["Trộn thịt xay với hành lá, nước mắm, tiêu.", "Rạch đậu phụ, nhồi thịt vào.", "Áp chảo mặt có thịt trước, không cần dầu, lật đều các mặt.", "Cho cà chua băm và ít nước, đun lửa nhỏ 10 phút."], tip: "Thịt thừa vo viên cho chung vào sốt." },
-    { id: "boxao", n: "Bò xào hành tây, bông cải", ing: [["bo", 180], ["dau", 8], ["hanhtay", 100], ["rau", 200]], steps: ["Thái bò mỏng ngang thớ, ướp tỏi, tiêu, chút dầu hào 10 phút.", "Chần bông cải 2 phút.", "Xào bò lửa thật to 1–2 phút đến khi vừa tái, trút ra.", "Xào hành tây, bông cải 2 phút rồi cho bò vào đảo đều, nêm nước mắm."], tip: "Lửa to, xào nhanh thì bò mềm, không dai." },
-    { id: "xaodau", n: "Bò xay xào đậu phụ", rice: 120, ing: [["boxay", 150], ["dauphu", 150], ["hanhtay", 50], ["cachua", 75], ["rau", 150]], steps: ["Phi tỏi, cho bò xay vào đảo tơi, không cần dầu.", "Bò ra mỡ thì chắt bớt.", "Thêm đậu phụ cắt hạt lựu, hành tây, cà chua, nêm nước mắm, tiêu, đảo 5 phút."], tip: "Hợp ăn với rau luộc chấm nước mắm tỏi ớt." },
-    { id: "cakho", n: "Cá basa kho tiêu", ing: [["basa", 250], ["dau", 5], ["duong", 5], ["rau", 250]], steps: ["Cắt cá miếng vừa ăn, ướp nước mắm, tiêu, hành tím, chút đường 15 phút.", "Phi hành với 1 thìa cà phê dầu, xếp cá vào, thêm nước ngập 1/3.", "Kho lửa nhỏ 15 phút, rắc tiêu và hành lá."], tip: "Kho lửa nhỏ, ít đảo để cá không nát." },
-    { id: "cahoi", n: "Cá hồi áp chảo, rau luộc", ing: [["cahoi", 150], ["dau", 3], ["rau", 300]], steps: ["Thấm khô cá, rắc muối tiêu.", "Chảo nóng, quét rất ít dầu, áp mặt da 4 phút, lật 2–3 phút.", "Ăn kèm rau luộc và chanh."], tip: "Cá hồi tự có mỡ, gần như không cần dầu." },
-    { id: "tom", n: "Tôm xào bông cải", ing: [["tom", 200], ["dau", 8], ["rau", 300]], steps: ["Bóc vỏ tôm, ướp tiêu, chút muối.", "Chần bông cải 2 phút.", "Phi tỏi, xào tôm đến khi đỏ, cho bông cải vào, nêm nước mắm, thêm chút nước, đảo 2 phút."], tip: "Thay bông cải bằng su su, cà rốt, đậu que đều hợp." },
-    { id: "trunghap", n: "Trứng hấp thịt băm", ing: [["trung", 150], ["lonxay", 80], ["rau", 250]], steps: ["Đánh 3 quả trứng với thịt băm, hành lá, nước mắm, tiêu, 2 thìa nước.", "Hấp cách thủy lửa vừa 15–18 phút, cắm đũa không chảy nước là chín.", "Ăn kèm rau luộc."], tip: "Hấp lửa vừa, ít mở vung để trứng mịn." }
-  ];
-  var RMAP = {}; RECIPES.forEach(function (r) { RMAP[r.id] = r; });
+  // oil: gram dầu; sugar: gram đường; flav: các vị hợp với cách nấu
+  var DSTY = {
+    xao: { n: "Xào", oil: 10, sugar: 0, min: 15, flav: ["sa", "toi", "hanh"] },
+    kho: { n: "Kho / rim", oil: 5, sugar: 5, min: 30, flav: ["gung", "tieu", "sa"] },
+    luoc: { n: "Luộc / hấp", oil: 0, sugar: 0, min: 20, flav: ["gung", "sa", "toi"] },
+    ap: { n: "Áp chảo / nồi chiên", oil: 5, sugar: 0, min: 20, flav: ["tieu", "toi", "sa"] }
+  };
+  var DFLAV = { sa: ["sả ớt", "2 cây sả, 1 quả ớt"], gung: ["gừng", "1 khúc gừng"], toi: ["tỏi", "3–4 tép tỏi"], tieu: ["tiêu", "tiêu đen xay"], hanh: ["hành tây", "nửa củ hành tây"] };
+  var DVEG = ["rau_muong", "cai_ngot", "bap_cai", "sup_lo_xanh", "su_su", "bi_xanh", "dau_que", "rau_ngot", "mong_toi", "ca_chua", "nam"];
+  function dName(o) {
+    var f = DFLAV[o.flav][0], v = { xao: "xào", kho: "kho", luoc: "luộc", ap: "áp chảo" }[o.sty];
+    if (o.pro === "trung") return { xao: "Trứng xào cà chua", kho: "Trứng kho " + f, luoc: "Trứng luộc", ap: "Trứng chiên hành" }[o.sty];
+    var cut = DPRO[o.pro].cuts.filter(function (c) { return c[0] === o.cut; })[0][1].toLowerCase();
+    return DPRO[o.pro].n + " " + (o.pro === "ga" && o.sty === "ap" ? "nướng" : v) + " " + f + " (" + cut + ")";
+  }
+  function dSteps(o) {
+    var f = DFLAV[o.flav][0], P = o.pro === "bo" ? "bò" : o.pro === "lon" ? "thịt lợn" : "gà";
+    if (o.pro === "trung") return {
+      xao: ["Xào 1–2 quả cà chua với tỏi phi đến khi mềm.", "Đánh trứng với chút nước mắm, tiêu, đổ vào chảo, đảo nhẹ đến khi vừa chín.", "Rau luộc ăn kèm."],
+      kho: ["Luộc chín trứng 9 phút, bóc vỏ.", "Kho với nước mắm, " + f + ", hành tím, 1 thìa cà phê đường và chút nước, lửa nhỏ 15 phút.", "Rau luộc ăn kèm."],
+      luoc: ["Cho trứng vào nước sôi: 7 phút lòng đào, 9–10 phút chín kỹ.", "Ngâm nước lạnh rồi bóc. Chấm muối tiêu.", "Luộc rau ngay nồi đó."],
+      ap: ["Đánh trứng với hành lá, nước mắm, tiêu.", "Chảo chống dính, ít dầu, lửa vừa, chiên 2–3 phút mỗi mặt.", "Rau luộc ăn kèm."]
+    }[o.sty];
+    return {
+      xao: ["Thái " + P + " mỏng" + (o.pro === "bo" ? " ngang thớ" : "") + ".", "Ướp " + f + ", tỏi, nước mắm, tiêu, 1 thìa cà phê dầu, 10 phút.", "Chảo thật nóng, xào lửa to " + (o.pro === "bo" ? "2–3" : "4–5") + " phút đến khi vừa chín, nhấc ra.", "Xào rau ngay chảo đó, trộn lại với thịt, nêm vừa."],
+      kho: ["Cắt " + P + " miếng vừa ăn.", "Ướp nước mắm, " + f + ", tiêu, 1 thìa cà phê đường, 15 phút.", "Phi hành tím, cho thịt vào đảo săn.", "Thêm chút nước, kho lửa nhỏ " + (o.pro === "bo" ? "40" : "20–25") + " phút đến khi sệt. Rau luộc ăn kèm."],
+      luoc: ["Cho " + P + " vào nồi nước lạnh cùng " + f + ", chút muối.", "Đun sôi rồi hạ lửa nhỏ: " + (o.pro === "bo" ? "bắp bò 40–50 phút, thăn nhúng 1–2 phút" : o.pro === "ga" ? "ức 12–15 phút, đùi 20 phút" : "15–20 phút") + ".", "Thái miếng, chấm nước mắm tỏi ớt. Luộc rau bằng nước luộc thịt."],
+      ap: ["Lạng " + P + " dày đều 1–1,5cm, thấm khô.", "Ướp " + f + ", muối, tiêu 10 phút.", "Chảo thật nóng, ít dầu, áp mỗi mặt 3–4 phút (nồi chiên 180°C, 12–15 phút).", "Để nghỉ 3 phút rồi thái. Rau luộc hoặc xào ăn kèm."]
+    }[o.sty];
+  }
+  function fid(id) { return FitDB.FOODS.filter(function (f) { return f.id === id; })[0]; }
+  // Thành phần của một món ghép (gram)
+  function dParts(o) {
+    var out = [];
+    if (o.pro === "trung") out.push({ id: "trung", g: o.eggs * 50 });
+    else { out.push({ id: o.cut, g: o.meat }); if (o.eggs) out.push({ id: "trung", g: o.eggs * 50 }); }
+    if (o.pro === "trung" && o.sty === "xao") out.push({ id: "ca_chua", g: 150 });
+    if (o.veg && o.vegG) out.push({ id: o.veg, g: o.vegG });
+    if (o.rice) out.push({ id: "com", g: o.rice });
+    if (o.oil) out.push({ id: "dau_an", g: o.oil });
+    var sg = DSTY[o.sty].sugar; if (sg) out.push({ id: "duong", g: sg });
+    return out;
+  }
+  function dSum(o) { return dParts(o).reduce(function (a, x) { var r = FitDB.calc(fid(x.id), x.g); a.kcal += r.kcal; a.p += r.p; a.c += r.c; a.f += r.f; return a; }, { kcal: 0, p: 0, c: 0, f: 0 }); }
+  // Tự tính lượng: đạm bữa tối nhắm phần còn thiếu nhưng tối đa ~0,6 g/kg (lượng một bữa cơ thể dùng tốt; phần dư bù ở bữa phụ),
+  // cơm lấp phần calo còn lại; nếu thịt nhiều mỡ làm vượt calo thì bớt thịt để vẫn giữ được ít nhất 100g cơm.
+  function dAuto(o, b) {
+    var kg = trendNow() || S.profile.weight, pT = clamp(b.p, 25, Math.round(0.6 * kg)), egg = o.pro === "trung", cut = fid(egg ? "trung" : o.cut);
+    var fitRice = function () { var other = dSum(Object.assign({}, o, { rice: 0 })).kcal; o.rice = clamp(Math.round((b.kcal - other) / 1.3 / 10) * 10, 0, 300); };
+    o.oil = DSTY[o.sty].oil; o.rice = 150;
+    for (var it = 0; it < 2; it++) {
+      var rest = dSum(Object.assign({}, o, egg ? { eggs: 0 } : { meat: 0 })), need = Math.max(0, pT - rest.p);
+      if (egg) o.eggs = clamp(Math.round(need / (cut.p / 2)), 2, 4);
+      else o.meat = clamp(Math.round(need / (cut.p / 100) / 10) * 10, 80, 250);
+      fitRice();
+    }
+    if (!egg && o.rice < 100) {
+      var base = dSum(Object.assign({}, o, { meat: 0, rice: 0 })).kcal, room = b.kcal - base - 130;
+      o.meat = clamp(Math.floor(room / (cut.kcal / 100) / 10) * 10, 80, o.meat); fitRice();
+    }
+    return o;
+  }
+  // Loại đạm ăn gần nhất cách đây bao nhiêu ngày (dựa trên thành phần đã ghi, hoặc tên món)
+  function proAge(pro, k) {
+    var ids = DPRO[pro].cuts.map(function (c) { return c[0]; }).concat(pro === "lon" ? ["lon_chin", "lon_bachi_chin", "lon_luoc", "heo_quay", "thit_nuong", "xa_xiu", "lon_xay"] : pro === "bo" ? ["bo_chin", "bo_xay"] : pro === "ga" ? ["ga_uc_chin", "ga_dui_chin", "ga_ta", "ga_ran", "ga_xe"] : ["trung_chien"]);
+    var rx = { bo: /\bbo\b/, lon: /\b(lon|heo|thit kho|ba chi|suon)\b/, ga: /\bga\b/, trung: /\btrung\b/ }[pro];
+    for (var i = 0; i <= 4; i++) if (dayFood(shiftKey(k, -i)).some(function (m) { return m.parts ? m.parts.some(function (x) { return ids.indexOf(x.id) >= 0; }) : rx.test(norm(m.n)); })) return i;
+    return 9;
+  }
+  function dinnerIdeas(k) {
+    var b = dinnerBudget(k), seed = parseKey(k).getDate(), stys = ["xao", "kho", "ap", "luoc"];
+    return ["bo", "lon", "ga", "trung"].map(function (pro, i) { return { pro: pro, age: proAge(pro, k), i: i }; })
+      .sort(function (x, y) { return y.age - x.age || (x.i + seed) % 4 - (y.i + seed) % 4; }).slice(0, 3)
+      .map(function (x, j) {
+        var sty = stys[(seed + j * 3 + x.i) % 4], fl = DSTY[sty].flav;
+        return dAuto({ pro: x.pro, cut: DPRO[x.pro].cuts[0][0], sty: sty, flav: fl[(seed + j) % fl.length], veg: DVEG[(seed * 3 + j * 5) % DVEG.length], vegG: 250, eggs: x.pro === "trung" ? 3 : 0 }, b);
+      });
+  }
 
 
   // =====================================================================
@@ -556,33 +616,23 @@
     if (k === todayKey()) h += dinnerCard(k);
     return h;
   }
-  function recipeCalc(r, riceG) {
-    var k = 0, p = 0, c = 0, f = 0;
-    r.ing.concat([["com", riceG]]).forEach(function (x) { var g = ING[x[0]], q = x[1] / 100; k += g[1] * q; p += g[2] * q; c += g[3] * q; f += g[4] * q; });
-    return { kcal: Math.round(k), p: Math.round(p), c: Math.round(c), f: Math.round(f) };
-  }
-  // Lượng cơm vừa khít phần calo còn lại (chừa ~200 kcal cho bữa phụ nếu còn sớm)
-  function riceFor(r, budget) { return clamp(Math.round((budget - recipeCalc(r, 0).kcal) / 1.3 / 10) * 10, 0, 250); }
   function dinnerBudget(k) {
-    var t = S.plan, s = daySum(k), reserve = new Date().getHours() < 20 ? 200 : 0;
-    return { kcal: t.kcal - s.kcal - reserve, p: t.p - s.p - (reserve ? 15 : 0) };
+    var t = S.plan, s = daySum(k), reserve = k === todayKey() && new Date().getHours() < 20 ? 150 : 0;
+    return { kcal: t.kcal - s.kcal - reserve, p: t.p - s.p };
   }
-  function cookedRecently(rid, k) { for (var i = 1; i <= 3; i++) if (dayFood(shiftKey(k, -i)).some(function (m) { return m.rid === rid; })) return true; return false; }
-  function dinnerOptions(k) {
-    var b = dinnerBudget(k), seed = parseKey(k).getDate();
-    return RECIPES.map(function (r, i) {
-      var rice = riceFor(r, b.kcal), c = recipeCalc(r, rice), score = Math.abs(c.p - Math.max(30, b.p)) + (cookedRecently(r.id, k) ? 25 : 0) + ((i + seed) % 4) * 2;
-      return { r: r, rice: rice, c: c, score: score };
-    }).sort(function (x, y) { return x.score - y.score; }).slice(0, 3);
+  function dLine(o) {
+    var main = o.pro === "trung" ? o.eggs + " quả trứng" : DPRO[o.pro].cuts.filter(function (c) { return c[0] === o.cut; })[0][1].toLowerCase() + " " + o.meat + "g";
+    return (o.pro === "trung" ? "" : DPRO[o.pro].n + " ") + main + " · cơm " + o.rice + "g · " + fid(o.veg).n.split(" (")[0].split(" /")[0].toLowerCase();
   }
   function dinnerCard(k) {
-    var hr = new Date().getHours();
-    if (hr < 14 || dayFood(k).some(function (m) { return m.rid; })) return "";
-    var b = dinnerBudget(k), h = '<div class="card"><div class="row between"><h2>Tối nay nấu gì?</h2><span class="note num">≈ ' + int(Math.max(0, b.kcal)) + " kcal · " + int(Math.max(0, b.p)) + "g đạm</span></div>";
-    dinnerOptions(k).forEach(function (o) {
-      h += '<button class="recipe-opt" data-act="recipe" data-v="' + o.r.id + '"><span><b>' + esc(o.r.n) + '</b><span class="s">Cơm ' + o.rice + "g" + (o.rice === 0 ? " (bỏ cơm)" : "") + '</span></span><span class="k"><b>' + o.c.kcal + "</b> kcal<br>" + o.c.p + "g đạm</span></button>";
+    if (new Date().getHours() < 14 || dayFood(k).some(function (m) { return mealOf(m) === "d"; })) return "";
+    var b = dinnerBudget(k), ideas = dinnerIdeas(k); UI.ideas = ideas;
+    var h = '<div class="card"><div class="row between"><h2>Tối nay nấu gì?</h2><span class="note num">còn ≈ ' + int(Math.max(0, b.kcal)) + " kcal · " + int(Math.max(0, b.p)) + "g đạm</span></div>";
+    ideas.forEach(function (o, i) {
+      var t = dSum(o);
+      h += '<button class="recipe-opt" data-act="didea" data-v="' + i + '"><span><b>' + esc(dName(o)) + '</b><span class="s">' + esc(dLine(o)) + '</span></span><span class="k"><b>' + int(t.kcal) + "</b> kcal<br>" + int(t.p) + "g đạm</span></button>";
     });
-    return h + '<button class="link" data-act="allrecipes" style="align-self:flex-start">Xem tất cả ' + RECIPES.length + " món</button></div>";
+    return h + '<p class="note">Ưu tiên loại thịt mấy hôm nay chưa ăn. Bấm vào để đổi thịt, cách nấu, vị, lượng.</p><button class="link" data-act="dbuild" style="align-self:flex-start">Tự ghép món khác</button></div>';
   }
   function addFood(k, item) {
     var base = { kcal: Math.round(item.kcal), p: Math.round(item.p * 10) / 10, c: Math.round((item.c || 0) * 10) / 10, f: Math.round((item.f || 0) * 10) / 10 };
@@ -900,13 +950,11 @@
   function mealSeg(cur, act) { return '<div class="seg mseg">' + MEALS.map(function (M) { return '<button aria-pressed="' + (cur === M[0]) + '" data-act="' + act + '" data-v="' + M[0] + '">' + M[2] + " " + M[1].replace("Bữa ", "") + "</button>"; }).join("") + "</div>"; }
   function addHtml() {
     if (SH.view === "num") return numHtml();
-    if (SH.view === "recipes") return recipesHtml();
-    if (SH.view === "recipe") return recipeHtml();
     return head("Thêm món") + mealSeg(SH.meal, "setmeal") + (UI.date !== todayKey() ? '<p class="note">Đang ghi cho ' + friendly(UI.date).toLowerCase() + ".</p>" : "") + '<input id="fq" placeholder="vd: xôi, thịt quay, chút rau" value="' + esc(SH.q) + '" autocomplete="off" aria-label="Ăn gì"><p class="note">Ghi từng thứ, cách nhau dấu phẩy. Có thể ghi lượng: 150g gà, 2 quả trứng, 1 chén cơm, nửa tô phở, chút rau.</p>' +
       '<div class="qchips">' + QUICK.map(function (x) { return '<button data-act="qadd" data-v="' + x + '">+ ' + x + "</button>"; }).join("") + '</div><div id="fres">' + searchRes() + "</div>";
   }
   var QUICK = ["cơm", "xôi", "bánh mì", "phở", "bún", "ức gà", "thịt lợn", "thịt bò", "cá", "trứng", "đậu phụ", "rau", "sữa chua", "chuối"];
-  var TOOLS = '<div class="tools"><button data-act="view" data-v="recipes"><span>🍳</span>Món tự nấu</button><button data-act="view" data-v="num"><span>📦</span>Đồ đóng gói (nhập số trên bao bì)</button></div>';
+  var TOOLS = '<div class="tools"><button data-act="dbuild"><span>🍳</span>Món tự nấu</button><button data-act="view" data-v="num"><span>📦</span>Đồ đóng gói (nhập số trên bao bì)</button></div>';
   function frList(list) { return '<p class="label">Món quen</p><div class="list-res">' + list.map(function (r, i) { return '<button data-act="fr" data-v="' + i + '"><span>' + esc(r.n) + '</span><span class="k">' + int(r.base.kcal) + " · " + fmt(r.base.p) + "g</span></button>"; }).join("") + "</div>"; }
   // Tách câu thành từng thứ, áp lựa chọn tay của người dùng (đổi món, chỉnh gram)
   function mealRows() {
@@ -974,21 +1022,45 @@
     var how = r.per ? fmt(r.base.kcal) + " kcal/100g × " + fmt(r.eat) + "g" : fmt(r.base.kcal) + " kcal/gói × " + fmt(r.eat) + " gói";
     return totals(r) + '<p class="note num" style="margin:0">' + how + (r.c || r.f ? " · tinh bột " + fmt(Math.round(r.c)) + "g · béo " + fmt(Math.round(r.f)) + "g" : "") + "</p>";
   }
-  function recipesHtml() {
-    var b = dinnerBudget(UI.date), h = head("Món tự nấu") + '<p class="note">Cơm đã chỉnh cho vừa phần calo còn lại hôm nay (≈ ' + int(Math.max(0, b.kcal)) + " kcal).</p>";
-    RECIPES.forEach(function (r) { var rice = riceFor(r, b.kcal), c = recipeCalc(r, rice); h += '<button class="recipe-opt" data-act="recipe" data-v="' + r.id + '"><span><b>' + esc(r.n) + '</b><span class="s">Cơm ' + rice + 'g</span></span><span class="k"><b>' + c.kcal + "</b> kcal<br>" + c.p + "g đạm</span></button>"; });
-    return h + '<button class="link" data-act="view" data-v="search">‹ Quay lại</button>';
+  // ---- Ghép bữa tối ----
+  function openDinner(o) {
+    var meal = SH.kind === "add" && SH.meal ? SH.meal : "d", b = dinnerBudget(UI.date);
+    o = o || dAuto({ pro: "ga", cut: "ga_uc", sty: "xao", flav: "sa", veg: DVEG[parseKey(UI.date).getDate() % DVEG.length], vegG: 250, eggs: 0 }, b);
+    SH = { kind: "dinner", o: Object.assign({}, o), meal: meal }; openSheet(dinnerHtml());
   }
-  function openRecipe(id) {
-    if (SH.kind !== "add") SH = { kind: "add", view: "search", q: "", ov: {}, adj: {}, segs: [], meal: "d" };
-    SH.view = "recipe"; SH.rid = id; SH.rice = riceFor(RMAP[id], dinnerBudget(UI.date).kcal); SH.ing = RMAP[id].ing.map(function (x) { return [x[0], x[1]]; });
-    if (sheet.hidden) openSheet(addHtml()); else { reSheet(addHtml()); sb.scrollTop = 0; }
+  function dChips(act, list, cur) { return '<div class="chips">' + list.map(function (x) { return '<button class="chip" data-act="' + act + '" data-v="' + x[0] + '" aria-pressed="' + (String(cur) === String(x[0])) + '">' + x[1] + "</button>"; }).join("") + "</div>"; }
+  function dinnerHtml() {
+    var o = SH.o, b = dinnerBudget(UI.date), egg = o.pro === "trung";
+    var h = head("Ghép bữa tối") + '<p class="note">Còn ≈ ' + int(Math.max(0, b.kcal)) + " kcal · " + int(Math.max(0, b.p)) + "g đạm hôm nay. App tự tính lượng thịt và cơm cho vừa; muốn khác thì sửa số.</p>";
+    h += '<p class="label">Đạm chính</p>' + dChips("dpro", Object.keys(DPRO).map(function (k) { return [k, DPRO[k].n]; }), o.pro);
+    if (!egg) h += '<p class="label">Phần thịt</p>' + dChips("dcut", DPRO[o.pro].cuts, o.cut);
+    h += '<p class="label">Cách nấu</p>' + dChips("dsty", Object.keys(DSTY).map(function (k) { return [k, DSTY[k].n]; }), o.sty);
+    if (!(egg && (o.sty === "luoc" || o.sty === "ap" || o.sty === "xao"))) h += '<p class="label">Vị</p>' + dChips("dflav", DSTY[o.sty].flav.map(function (k) { return [k, DFLAV[k][0]]; }), o.flav);
+    h += '<p class="label">Rau</p><select id="dVeg">' + DVEG.map(function (id) { return '<option value="' + id + '"' + (id === o.veg ? " selected" : "") + ">" + esc(fid(id).n) + "</option>"; }).join("") + "</select>";
+    if (!egg) h += '<p class="label">Thêm trứng</p>' + dChips("deggs", [[0, "Không"], [1, "1 quả"], [2, "2 quả"], [3, "3 quả"]], o.eggs);
+    h += '<p class="label">Lượng</p><div class="ing">' +
+      (egg ? "<div><span>Trứng</span>" + gIn('data-di="eggs"', o.eggs, "quả") + "</div>" : "<div><span>" + esc(fid(o.cut).n.replace(" (sống)", "")) + ' <span class="note">cân sống</span></span>' + gIn('data-di="meat"', o.meat, "g") + "</div>") +
+      "<div><span>" + esc(fid(o.veg).n) + "</span>" + gIn('data-di="vegG"', o.vegG, "g") + "</div><div><span>Cơm chín</span>" + gIn('data-di="rice"', o.rice, "g") + "</div><div><span>Dầu ăn</span>" + gIn('data-di="oil"', o.oil, "g") + "</div></div>";
+    h += '<div id="dprep">' + dPrep(o) + "</div>";
+    return h + '<div class="stick"><div id="dtot">' + dTot(o, b) + '</div><button class="btn" data-act="deat">Đã ăn món này</button></div>';
   }
-  function recipeHtml() {
-    var r = RMAP[SH.rid], c = recipeCalc({ ing: SH.ing }, SH.rice), h = head(esc(r.n));
-    h += '<p class="note">Số gợi ý sẵn, nấu thực tế bao nhiêu thì sửa lại cho đúng.</p><div class="ing">' + SH.ing.map(function (x, i) { return "<div><span>" + ING[x[0]][0] + "</span>" + gIn('data-ri="' + i + '"', x[1], "g") + "</div>"; }).join("") + "<div><span>Cơm chín</span>" + gIn('data-ri="rice"', SH.rice, "g") + "</div></div>";
-    h += '<p class="note">Thịt cá cân lúc còn sống. 100g cơm chín ≈ ⅔ chén.</p><ol class="steps">' + r.steps.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") + '</ol><p class="tip">' + esc(r.tip) + "</p>";
-    return h + '<div class="stick"><div id="rtot">' + totals(c) + '</div><button class="btn" data-act="addrecipe">Đã ăn món này</button></div>';
+  function dPrep(o) {
+    var need = [o.pro === "trung" ? o.eggs + " quả trứng" : fid(o.cut).n.replace(" (sống)", "").toLowerCase() + " " + o.meat + "g"];
+    if (o.eggs && o.pro !== "trung") need.push(o.eggs + " quả trứng");
+    need.push(fid(o.veg).n.split(" (")[0].toLowerCase() + " " + o.vegG + "g");
+    if (!(o.pro === "trung" && o.sty !== "kho")) need.push(DFLAV[o.flav][1]);
+    if (o.pro === "trung" && o.sty === "xao") need.push("1–2 quả cà chua");
+    return '<div class="dprep"><p class="label">' + esc(dName(o)) + " · khoảng " + DSTY[o.sty].min + " phút</p><p><b>Cần chuẩn bị:</b> " + esc(need.join(", ")) + ', nước mắm, tỏi.</p><ol class="steps">' + dSteps(o).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + '</ol><p class="note">Không có cân: 100g thịt sống ≈ bằng lòng bàn tay, dày khoảng 1 đốt ngón tay. 150g cơm ≈ 1 chén.</p></div>';
+  }
+  function dTot(o, b) {
+    var t = dSum(o), over = t.kcal - Math.max(0, b.kcal), short = b.p - t.p, msg = [];
+    if (over > 60) msg.push("Vượt khoảng " + int(over) + " kcal: bớt cơm hoặc chọn phần nạc hơn.");
+    if (short > 10) msg.push("Còn thiếu " + int(short) + "g đạm" + (o.cut === "lon_bachi" || o.cut === "ga_dui_da" ? " (phần này nhiều mỡ, ít đạm)" : "") + ": bù bằng sữa chua Hy Lạp hoặc whey ở bữa phụ.");
+    return totals(t) + (msg.length ? '<p class="note" style="margin:0">' + msg.join(" ") + "</p>" : "");
+  }
+  function dRefresh(auto) {
+    var o = SH.o; if (auto) dAuto(o, dinnerBudget(UI.date));
+    reSheet(dinnerHtml());
   }
   // ---- Ghi cardio ----
   function openCardio(type, id) {
@@ -1069,7 +1141,7 @@
       '<div class="card"><h2>Sao lưu</h2><p class="note">Dữ liệu chỉ nằm trên máy này. Sao lưu ra file rồi cất vào Drive hoặc Zalo.' + (lb ? " Lần gần nhất " + new Date(lb).toLocaleDateString("vi-VN") + "." : "") + '</p><div class="grid2"><button class="btn" data-act="backup">Sao lưu</button><button class="btn ghost" data-act="restore">Khôi phục</button></div></div>' +
       '<div class="card"><h2>Cách app tính</h2><ul style="margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px"><li><b>1RM ước tính</b> = kg × (1 + (rep + RIR) / 30).</li><li><b>Hiệp nặng</b>: hiệp có RIR 0–3. Vùng nên đạt 10–20 hiệp mỗi nhóm cơ lớn mỗi tuần.</li><li><b>Tăng tạ</b> khi đạt đỉnh khoảng rep ở mọi hiệp mà vẫn còn dư rep.</li><li><b>Chững</b>: 3 buổi liền không vượt kỷ lục 1RM cũ.</li><li><b>Chọn bài</b>: mỗi vị trí trong giáo án có vài bài xếp theo ưu tiên; app lấy bài đầu tiên bạn có dụng cụ. Báo đau khớp, hoặc 2/3 buổi không cảm nhận cơ, thì app khuyên đổi bài.</li><li><b>Cân xu hướng</b>: trung bình trượt, mỗi ngày lấy 10% số cân mới.</li><li><b>% mỡ</b>: công thức Hải quân Mỹ từ vòng bụng, vòng cổ, chiều cao (nữ thêm vòng hông). Khối mỡ = cân xu hướng × % mỡ, khối nạc = phần còn lại.</li><li><b>TDEE</b> = calo ăn trung bình − thay đổi cân xu hướng × 7.700 kcal/kg, tính trên 3 tuần gần nhất.</li></ul></div>' +
       '<div class="card"><h2>Cơ sở dữ liệu</h2><p class="note">Xem calo, đạm của thực phẩm và lưu ý kỹ thuật từng bài tập.</p><a class="btn ghost" href="du-lieu.html" style="display:block;text-align:center;text-decoration:none">Mở trang dữ liệu</a></div>' +
-      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 4.3</p>');
+      '<div class="card"><h2>Xoá toàn bộ</h2><button class="btn ghost" data-act="wipe">Xoá mọi dữ liệu</button></div><p class="note" style="text-align:center">FitCore · bản 4.4</p>');
   }
 
   // =====================================================================
@@ -1137,9 +1209,9 @@
     else if (a === "savew") { var w = num(document.getElementById("wIn").value); if (!(w >= 30 && w <= 250)) { toast("Nhập cân nặng bằng kg, ví dụ 79,6"); return; } S.weight[todayKey()] = w; flush(); render(); toast("Đã lưu " + fmt(w) + " kg"); }
     else if (a === "clearw") { delete S.weight[todayKey()]; flush(); render(); }
     else if (a === "edit") openEdit(v);
-    else if (a === "recipe") openRecipe(v);
     else if (a === "addto") openAdd(v);
-    else if (a === "allrecipes") { openAdd("d"); SH.view = "recipes"; reSheet(addHtml()); }
+    else if (a === "didea") openDinner(UI.ideas[+v]);
+    else if (a === "dbuild") openDinner();
     else if (a === "waist") openMeasure();
     else if (a === "toclaude") shareClaude();
     else if (a === "recalc") { var r = estimateTDEE(), np = planFrom(r.tdee), old = S.plan.kcal; S.checkins.unshift({ date: todayKey(), tdee: np.tdee, est: r.est, kcal: np.kcal, p: np.p, from: old }); S.plan = np; flush(); UI.banner = "Mục tiêu mới: " + int(np.kcal) + " kcal (" + (np.kcal >= old ? "+" : "") + int(np.kcal - old) + "), " + np.p + "g đạm."; render(); }
@@ -1215,8 +1287,17 @@
       var label = nn + " (" + (R0.per ? fmt(R0.eat) + "g" : fmt(R0.eat) + " gói") + ")";
       addFood(UI.date, { n: label, kcal: R0.kcal, p: R0.p, c: R0.c, f: R0.f, meal: SH.meal }); closeSheet(); render(); toast("Đã thêm " + int(R0.kcal) + " kcal · " + fmt(Math.round(R0.p * 10) / 10) + "g đạm");
     }
-    else if (a === "recipe") openRecipe(v);
-    else if (a === "addrecipe") { var R = RMAP[SH.rid], c = recipeCalc({ ing: SH.ing }, SH.rice); addFood(UI.date, { n: R.n + " (cơm " + SH.rice + "g)", kcal: c.kcal, p: c.p, c: c.c, f: c.f, rid: R.id, meal: SH.meal || "d" }); closeSheet(); render(); toast("Đã ghi " + R.n + ": " + c.kcal + " kcal"); }
+    else if (a === "dbuild") openDinner();
+    else if (a === "dpro") { var o0 = SH.o; o0.pro = v; o0.cut = DPRO[v].cuts[0][0]; o0.eggs = v === "trung" ? 3 : 0; if (DSTY[o0.sty].flav.indexOf(o0.flav) < 0) o0.flav = DSTY[o0.sty].flav[0]; dRefresh(true); }
+    else if (a === "dcut") { SH.o.cut = v; dRefresh(true); }
+    else if (a === "dsty") { SH.o.sty = v; if (DSTY[v].flav.indexOf(SH.o.flav) < 0) SH.o.flav = DSTY[v].flav[0]; dRefresh(true); }
+    else if (a === "dflav") { SH.o.flav = v; dRefresh(false); }
+    else if (a === "deggs") { SH.o.eggs = +v; dRefresh(true); }
+    else if (a === "deat") {
+      var od = SH.o, td = dSum(od); if (!td.kcal) return;
+      addFood(UI.date, { n: dName(od) + ", cơm " + od.rice + "g", kcal: td.kcal, p: td.p, c: td.c, f: td.f, rid: "dn", meal: SH.meal || "d", parts: dParts(od) });
+      closeSheet(); render(); toast("Đã ghi " + int(td.kcal) + " kcal · " + int(td.p) + "g đạm");
+    }
     else if (a === "mul") { var x = +v, bb = SH.b0; SH.mul = x; document.getElementById("eK").value = int(bb.kcal * x); document.getElementById("eP").value = fmt(Math.round(bb.p * x * 10) / 10); sb.querySelectorAll('[data-act="mul"]').forEach(function (q) { q.setAttribute("aria-pressed", q === b); }); }
     else if (a === "saveedit") {
       var m = findFood(SH.id);
@@ -1273,9 +1354,9 @@
       var ei = +t.getAttribute("data-ei"), it = SH.eg[ei]; it.g = it.food.noG ? gv * 100 : gv;
       document.getElementById("ek" + ei).innerHTML = kCell(FitDB.calc(it.food, it.g)); document.getElementById("etot").innerHTML = totals(editSum()); return;
     }
-    if (t.hasAttribute("data-ri")) {
-      var ri = t.getAttribute("data-ri"); if (ri === "rice") SH.rice = gv; else SH.ing[+ri][1] = gv;
-      document.getElementById("rtot").innerHTML = totals(recipeCalc({ ing: SH.ing }, SH.rice)); return;
+    if (t.hasAttribute("data-di")) {
+      SH.o[t.getAttribute("data-di")] = t.getAttribute("data-di") === "eggs" ? Math.round(gv) : gv;
+      document.getElementById("dtot").innerHTML = dTot(SH.o, dinnerBudget(UI.date)); document.getElementById("dprep").innerHTML = dPrep(SH.o); return;
     }
     if (SH.view === "num" && e.target.id) { SH.nv = SH.nv || {}; SH.nv[e.target.id] = e.target.value; var nr = document.getElementById("nres"); if (nr) nr.innerHTML = numRes(); return; }
     if (e.target.id !== "fq") return;
@@ -1288,6 +1369,7 @@
     setTimeout(function () { if (t.value === v0) try { t.setSelectionRange(0, v0.length); } catch (er) {} }, 0); // Safari trên iPhone
   });
   sheet.addEventListener("change", function (e) {
+    if (e.target.id === "dVeg") { SH.o.veg = e.target.value; dRefresh(false); return; }
     var i = e.target.getAttribute("data-i"); if (i == null || e.target.tagName !== "SELECT") return;
     SH.ov[+i] = e.target.value; delete SH.adj[+i]; document.getElementById("fres").innerHTML = searchRes();
   });
